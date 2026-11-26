@@ -17,6 +17,7 @@ using KiwisCoOpModCore;
 using Microsoft.Win32;
 using System;
 using System.Globalization;
+using System.Threading;
 using System.Windows.Forms;
 using System.Configuration;
 
@@ -24,6 +25,8 @@ namespace KiwisCoOpMod
 {
     internal static class Program
     {
+        // Set before userInterface, so the window's constructor can already compare threads with it.
+        public static readonly Thread uiThread = Thread.CurrentThread;
         public static readonly UserInterface userInterface = new(); // WORKAROUND SPECIFICALLY FOR LUA
         const string UriScheme = "kcom";
         const string FriendlyName = "Kiwi's Co-Op Mod";

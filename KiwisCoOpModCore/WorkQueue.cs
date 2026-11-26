@@ -75,6 +75,31 @@ namespace KiwisCoOpModCore
             return done.Task;
         }
 
+        // Runs the action and returns once it has run: at once on the queue's own thread, else queued.
+        // Its errors go to onError. Never call it from a thread the queued work waits for (such as Invoke).
+        public void Run(Action action)
+        {
+            Run(action, System.Threading.Timeout.InfiniteTimeSpan);
+        }
+
+        // Same, but stops waiting after the timeout and returns false: the action then still runs later.
+        public bool Run(Action action, TimeSpan timeout)
+        {
+            if (IsCurrentThread)
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception e)
+                {
+                    ReportError(e);
+                }
+                return true;
+            }
+            return RunAsync(action).Wait(timeout);
+        }
+
         // Stops accepting work. What is already queued still runs, then the thread ends.
         public void Complete()
         {
@@ -99,16 +124,21 @@ namespace KiwisCoOpModCore
                     }
                     catch (Exception e)
                     {
-                        try
-                        {
-                            onError(e);
-                        }
-                        catch
-                        {
-                            // A failing error handler must not stop the server thread.
-                        }
+                        ReportError(e);
                     }
                 }
+            }
+        }
+
+        private void ReportError(Exception e)
+        {
+            try
+            {
+                onError(e);
+            }
+            catch
+            {
+                // A failing error handler must not stop the queue's thread.
             }
         }
     }

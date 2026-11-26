@@ -54,7 +54,7 @@ namespace KiwisCoOpMod
             }
         }
         // Completes once the server is listening (or failed to start). Never wait on it on the UI thread:
-        // the start handlers Invoke it.
+        // a gamemode's or plugin's start handler may Invoke it.
         public Task Start(Type type, List<Type> plugins)
         {
             return WorkQueue.Server.RunAsync(() => StartOnServerThread(type, plugins));
@@ -83,7 +83,7 @@ namespace KiwisCoOpMod
                     });
                     if (gamemodeType != null)
                     {
-                        Program.userInterface.Invoke(() => Program.userInterface.LogToOutput(channel, "Starting " + gamemodeType.Name + " gamemode on map " + Map.map + " with port " + Settings.Default.ServerPort));
+                        Program.userInterface.LogToOutput(channel, "Starting " + gamemodeType.Name + " gamemode on map " + Map.map + " with port " + Settings.Default.ServerPort);
                         PluginHandler.Handle(plugins, PluginHandleType.Server_PreGamemode_PostStart, gamemodeType, plugins, Map.map);
                         LuaEnvironment.instance.Handle(PluginHandleType.Server_PreGamemode_PostStart, gamemodeType, plugins, Map.map);
                         GamemodeHandler.Handle(gamemodeType, GamemodeHandleType.PostStart, gamemodeType, plugins);
@@ -136,7 +136,7 @@ namespace KiwisCoOpMod
                         LuaEnvironment.instance.Handle(PluginHandleType.Server_PostGamemode_PostClose, gamemodeType, plugins, Map.map);
                     }
                 }
-                Program.userInterface.Invoke(() => Program.userInterface.LogToOutput(channel, "Closing server on port " + Settings.Default.ServerPort));
+                Program.userInterface.LogToOutput(channel, "Closing server on port " + Settings.Default.ServerPort);
                 wss.Dispose();
                 wss = null;
             }
@@ -187,7 +187,7 @@ namespace KiwisCoOpMod
                         LuaEnvironment.instance.Handle(PluginHandleType.Server_PostGamemode_ClientOpen, connections, socket, client.Username);
                     }
                     connections.ForEach(c => c.Session.Send(JsonConvert.SerializeObject(outputDisconnect)));
-                    Program.userInterface.Invoke(() => Program.userInterface.LogToOutput(channel, client.Username + " connected"));
+                    Program.userInterface.LogToOutput(channel, client.Username + " connected");
                     break;
                 }
             }
@@ -212,7 +212,7 @@ namespace KiwisCoOpMod
                         LuaEnvironment.instance.Handle(PluginHandleType.Server_PostGamemode_ClientClose, connections, socket, client.Username);
                     }
                     connections.ForEach(c => c.Session.Send(JsonConvert.SerializeObject(outputDisconnect)));
-                    Program.userInterface.Invoke(() => Program.userInterface.LogToOutput(channel, client.Username + " disconnected"));
+                    Program.userInterface.LogToOutput(channel, client.Username + " disconnected");
                     connections.Remove(client);
                     break;
                 }
@@ -308,7 +308,7 @@ namespace KiwisCoOpMod
                                 if (response.data != null)
                                 {
                                     if (response.data.Length == 0) return;
-                                    Program.userInterface.Invoke(() => Program.userInterface.LogToOutput(channel, indexedClient.Username + ": " + response.data));
+                                    Program.userInterface.LogToOutput(channel, indexedClient.Username + ": " + response.data);
                                     if (response.data.StartsWith("/"))
                                     {
                                         string command = response.data.Split(" ").ToArray().First().Replace("/", "").ToLower();
@@ -376,7 +376,7 @@ namespace KiwisCoOpMod
                                 if (response.data != null)
                                 {
                                     if (response.data.Length == 0) return;
-                                    Program.userInterface.Invoke(() => Program.userInterface.LogToOutput(channel, indexedClient0.Username + ": " + response.data));
+                                    Program.userInterface.LogToOutput(channel, indexedClient0.Username + ": " + response.data);
                                 }
                             }
                             break;

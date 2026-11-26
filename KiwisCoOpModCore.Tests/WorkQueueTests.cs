@@ -141,5 +141,86 @@ namespace KiwisCoOpModCore.Tests
             await queue.RunAsync(() => ran++).WaitAsync(Timeout, TestContext.Current.CancellationToken);
             Assert.Equal(100, ran);
         }
+
+        [Fact]
+        public async Task Run_FromAnotherThread_WaitsForTheWorkOnTheQueueThread()
+        {
+            // The server and client socket threads wait like this for the Lua thread (UPGRADE_PLAN.md B3).
+            ConcurrentQueue<Exception> errors = new();
+            WorkQueue queue = new("run", errors.Enqueue);
+            bool ran = false;
+            bool onQueueThread = false;
+
+            await Task.Run(() =>
+            {
+                queue.Run(() =>
+                {
+                    Thread.Sleep(50);
+                    onQueueThread = queue.IsCurrentThread;
+                    ran = true;
+                });
+                Assert.True(ran);
+                queue.Run(() => throw new InvalidOperationException("boom"));
+            }, TestContext.Current.CancellationToken).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+            Assert.True(onQueueThread);
+            Assert.IsType<InvalidOperationException>(Assert.Single(errors));
+            queue.Complete();
+        }
+
+        [Fact]
+        public async Task Run_OnTheQueueThread_RunsAtOnceInsteadOfDeadlocking()
+        {
+            // A Lua handler that calls back into the Lua environment (refresh, refresh_all) does this.
+            ConcurrentQueue<Exception> errors = new();
+            WorkQueue queue = new("nested", errors.Enqueue);
+            List<string> order = new();
+
+            await queue.RunAsync(() =>
+            {
+                order.Add("outer");
+                queue.Run(() => order.Add("inner"));
+                queue.Run(() => throw new InvalidOperationException("boom"));
+                order.Add("after");
+            }).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+            Assert.Equal(new[] { "outer", "inner", "after" }, order);
+            Assert.IsType<InvalidOperationException>(Assert.Single(errors));
+            queue.Complete();
+        }
+
+        [Fact]
+        public async Task Run_WithTimeout_StopsWaiting_AndTheWorkStillRunsLater()
+        {
+            // The UI thread waits like this, so an old script that Invokes the window can't hang it for good.
+            WorkQueue queue = new("timeout");
+            using ManualResetEventSlim release = new();
+            bool ran = false;
+
+            bool done = await Task.Run(() => queue.Run(() =>
+            {
+                release.Wait();
+                ran = true;
+            }, TimeSpan.FromMilliseconds(50)), TestContext.Current.CancellationToken).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+            Assert.False(done);
+            Assert.False(ran);
+            release.Set();
+            await queue.RunAsync(() => { }).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            Assert.True(ran);
+            Assert.True(await Task.Run(() => queue.Run(() => { }, Timeout), TestContext.Current.CancellationToken));
+            queue.Complete();
+        }
+
+        [Fact]
+        public void Run_AfterComplete_ReturnsWithoutRunning()
+        {
+            WorkQueue queue = new("closed");
+            queue.Complete();
+            Assert.True(queue.Join(Timeout));
+            bool ran = false;
+            queue.Run(() => ran = true);
+            Assert.False(ran);
+        }
     }
 }

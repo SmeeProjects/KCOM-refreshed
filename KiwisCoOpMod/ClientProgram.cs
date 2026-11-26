@@ -57,18 +57,16 @@ namespace KiwisCoOpMod
         {
             if (ws != null && vConsole != null)
             {
-                ui.Invoke(() => ui.LogToOutput(channel, "Connecting to VConsole using port " + Settings.Default.VconsolePort));
+                ui.LogToOutput(channel, "Connecting to VConsole using port " + Settings.Default.VconsolePort);
+                // Only called on the UI thread (Start), so the dialog needs no Invoke.
                 if (!vConsole.Connect(ws))
                 {
-                    ui.Invoke(() =>
-                    {
-                        ui.LogToOutput(channel, "Failed to connect to VConsole");
-                        DialogResult res = MessageBox.Show("An error occured while connecting to VConsole.\nMake sure that Half-Life: Alyx is open.\nWould you like to re-connect?", "Error", MessageBoxButtons.YesNo);
-                        if (res == DialogResult.Yes)
-                            ConnectVConsole(ws);
-                        else
-                            ui.Invoke(() => ui.LogToOutput(channel, "Disconnected from VConsole"));
-                    });
+                    ui.LogToOutput(channel, "Failed to connect to VConsole");
+                    DialogResult res = MessageBox.Show("An error occured while connecting to VConsole.\nMake sure that Half-Life: Alyx is open.\nWould you like to re-connect?", "Error", MessageBoxButtons.YesNo);
+                    if (res == DialogResult.Yes)
+                        ConnectVConsole(ws);
+                    else
+                        ui.LogToOutput(channel, "Disconnected from VConsole");
                 }
             }
         }
@@ -89,7 +87,7 @@ namespace KiwisCoOpMod
                 ws.Start();
                 ws.DisconnectionHappened.Subscribe(info =>
                 {
-                    ui.Invoke(() => ui.LogToOutput(channel, "Disconnected: " + info.Type.ToString()));
+                    ui.LogToOutput(channel, "Disconnected: " + info.Type.ToString());
                 });
                 ws.MessageReceived.Subscribe(msg =>
                 {
@@ -103,17 +101,17 @@ namespace KiwisCoOpMod
                             case "authenticated":
                                 if (response.version > Response.internalVersion)
                                 {
-                                    ui.Invoke(() => ui.LogToOutput(channel, "Client is running an older version! Please update your client."));
+                                    ui.LogToOutput(channel, "Client is running an older version! Please update your client.");
                                 }
                                 else if (response.version < Response.internalVersion)
                                 {
-                                    ui.Invoke(() => ui.LogToOutput(channel, "Server is running an older version! Please ask the owner to update their server."));
+                                    ui.LogToOutput(channel, "Server is running an older version! Please ask the owner to update their server.");
                                 }
                                 if (vConsole != null && response.map != null)
                                 {
                                     if (map != response.map)
                                     {
-                                        ui.Invoke(() => ui.LogToOutput(channel, "Changing map to " + response.map));
+                                        ui.LogToOutput(channel, "Changing map to " + response.map);
                                         vConsole.WriteCommand("addon_play " + response.map);
                                         map = response.map;
                                     }
@@ -122,7 +120,7 @@ namespace KiwisCoOpMod
                             case "chat":
                                 if (response.data != null && response.remoteClientUsername != null)
                                 {
-                                    ui.Invoke(() => ui.LogToOutput(chatChannel, response.remoteClientUsername + ": " + response.data));
+                                    ui.LogToOutput(chatChannel, response.remoteClientUsername + ": " + response.data);
                                 }
                                 break;
                             case "command":
@@ -135,18 +133,18 @@ namespace KiwisCoOpMod
                                 if (vConsole != null && response.data != null)
                                 {
                                     if (ui != null)
-                                        ui.Invoke(() => ui.LogToOutput(statusChannel, response.data));
+                                        ui.LogToOutput(statusChannel, response.data);
                                 }
                                 break;
                             case "vconsole":
                                 if (vConsole != null && response.data != null && Settings.Default.ClientPrintVconsole)
                                 {
                                     if (ui != null)
-                                        ui.Invoke(() => ui.LogToOutput(vConsoleChannel, response.data));
+                                        ui.LogToOutput(vConsoleChannel, response.data);
                                 }
                                 break;
                             default:
-                                ui.Invoke(() => ui.LogToOutput(channel, "UNIMPLEMENTED TYPE: " + response.type + "!"));
+                                ui.LogToOutput(channel, "UNIMPLEMENTED TYPE: " + response.type + "!");
                                 break;
                         }
                         PluginHandler.Handle(plugins, PluginHandleType.Client_PostResponse, response);
@@ -154,7 +152,7 @@ namespace KiwisCoOpMod
                     }
                     else
                     {
-                        ui.Invoke(() => ui.LogToOutput(channel, "SERVER SENT INVALID DATA!"));
+                        ui.LogToOutput(channel, "SERVER SENT INVALID DATA!");
                     }
                 });
                 ws.ReconnectionHappened.Subscribe(recinfo =>
@@ -166,7 +164,7 @@ namespace KiwisCoOpMod
                         timestamp = (long)DateTime.UtcNow.Subtract(DateTime.UnixEpoch).TotalSeconds
                     };
                     ws.Send(JsonConvert.SerializeObject(input));
-                    ui.Invoke(() => ui.LogToOutput(channel, "Client attempted connection to IP " + Settings.Default.ClientIpAddress + ":" + Settings.Default.ServerPort));
+                    ui.LogToOutput(channel, "Client attempted connection to IP " + Settings.Default.ClientIpAddress + ":" + Settings.Default.ServerPort);
                 });
                 ConnectVConsole(ws);
                 PluginHandler.Handle(plugins, PluginHandleType.Client_PostStart, ui, ws, error);
@@ -182,7 +180,7 @@ namespace KiwisCoOpMod
                 ws.Stop(System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, "Closed by KCOM.");
                 ws.Dispose();
                 ws = null;
-                ui.Invoke(() => ui.LogToOutput(channel, "Client closed"));
+                ui.LogToOutput(channel, "Client closed");
             }
             if (vConsole != null)
             {
