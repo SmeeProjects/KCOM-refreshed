@@ -36,6 +36,7 @@
 	- Open KCOM using `KiwisCoOpMod.exe` and click "File" > "Install Addon". KCOM finds Half-Life: Alyx in your Steam libraries, or asks you for its folder.
 	- Or right-click `install-addon.ps1` in the KCOM folder and select "Run with PowerShell". From a clone of this repository, run `powershell -ExecutionPolicy Bypass -File tools\install-addon.ps1` (add `-GamePath "<Half-Life Alyx folder>"` if Steam's libraries don't list the game).
 	- Or copy the [game addon](WorkshopAddon/game/hlvr_addons/kiwimp_alyx) folder `kiwimp_alyx` into Half-Life: Alyx's `game/hlvr_addons` folder by hand (create `hlvr_addons` if it doesn't exist).
+	- Note: the menu item and `install-addon.ps1` come with releases built from this repository. Older releases from the original KCOM repository have neither: copy the folder by hand, or build KCOM from source (see [Debugging/Modding](#debuggingmodding)).
 	- Note: installing again replaces the addon's folder with the new version. A folder linked to a clone (see [Symlinks](#symlinks)) is left alone.
 	- Note: the addon's sounds and the `mp_kiwitest` test map aren't compiled yet, so they don't work without the Workshop Tools (see `UPGRADE_PLAN.md` W10).
 - Set the following launch options for Half-Life: Alyx in Steam: `-console -vconsole -language english`

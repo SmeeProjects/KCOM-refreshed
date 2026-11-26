@@ -534,7 +534,17 @@ namespace KiwisCoOpMod
         private void InstallAddonToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string source = Path.Combine(AppContext.BaseDirectory, "addon", AddonInstaller.AddonName);
-            string? game = AddonInstaller.FindGameDirectory(GetSteamDirectories());
+            string? game;
+            try
+            {
+                game = AddonInstaller.FindGameDirectory(GetSteamDirectories());
+            }
+            catch (Exception ex)
+            {
+                // An unreadable libraryfolders.vdf or manifest: let the player pick the folder instead.
+                Log.Warning("Addon", "Failed to search the Steam libraries for Half-Life: Alyx", ex);
+                game = null;
+            }
             if (game == null)
             {
                 using FolderBrowserDialog dialog = new()

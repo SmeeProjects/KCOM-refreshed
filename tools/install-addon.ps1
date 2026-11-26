@@ -88,6 +88,25 @@ function Test-ContainsLink([string]$Path) {
     return $false
 }
 
+# "Run with PowerShell" (started from Explorer) closes the window when the script ends: keep it open
+# so the player can read the result.
+function Wait-IfStartedFromExplorer {
+    try {
+        $parentId = (Get-CimInstance Win32_Process -Filter "ProcessId = $PID").ParentProcessId
+        if ((Get-Process -Id $parentId).ProcessName -eq 'explorer') {
+            Read-Host 'Press Enter to close this window' | Out-Null
+        }
+    } catch {
+        # Not on Windows, or the parent is gone: nothing to wait for.
+    }
+}
+
+trap {
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    Wait-IfStartedFromExplorer
+    exit 1
+}
+
 if (-not $Source) {
     $candidates = @(
         (Join-Path $PSScriptRoot "..\WorkshopAddon\game\hlvr_addons\$AddonName"),
@@ -127,3 +146,4 @@ if ($PSCmdlet.ShouldProcess($target, "Copy the addon from $Source")) {
     Copy-Item -LiteralPath $Source -Destination $target -Recurse
     Write-Host "Installed the KCOM addon to $target"
 }
+Wait-IfStartedFromExplorer

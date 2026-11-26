@@ -61,6 +61,12 @@ namespace KiwisCoOpModCore.Tests
         }
 
         [Fact]
+        public void ParseLibraryFolders_UnescapesQuotes()
+        {
+            Assert.Equal(new[] { "/mnt/Library \"2\"" }, AddonInstaller.ParseLibraryFolders("\"libraryfolders\" { \"0\" { \"path\" \"/mnt/Library \\\"2\\\"\" } }"));
+        }
+
+        [Fact]
         public void ParseManifestValue_ReadsTopLevelKeyOnly()
         {
             string acf = """
@@ -83,9 +89,9 @@ namespace KiwisCoOpModCore.Tests
         public void FindGameDirectory_SearchesEveryLibrary()
         {
             string steam = Path.Combine(root, "Steam");
-            string library = Path.Combine(root, "Library \"2\"");
+            string library = Path.Combine(root, "Library 2");
             Directory.CreateDirectory(Path.Combine(steam, "steamapps"));
-            string vdf = "\"libraryfolders\" { \"0\" { \"path\" \"" + steam.Replace("\\", "\\\\") + "\" } \"1\" { \"path\" \"" + library.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\" } }";
+            string vdf = "\"libraryfolders\" { \"0\" { \"path\" \"" + steam.Replace("\\", "\\\\") + "\" } \"1\" { \"path\" \"" + library.Replace("\\", "\\\\") + "\" } }";
             File.WriteAllText(Path.Combine(steam, "steamapps", "libraryfolders.vdf"), vdf);
             string game = Path.Combine(library, "steamapps", "common", "HLA");
             Directory.CreateDirectory(Path.Combine(game, "game", "hlvr"));
@@ -143,7 +149,15 @@ namespace KiwisCoOpModCore.Tests
             string game = MakeGame();
             string target = Path.Combine(game, "game", "hlvr_addons", "kiwimp_alyx");
             Directory.CreateDirectory(target);
-            Directory.CreateSymbolicLink(Path.Combine(target, "scripts"), Path.Combine(source, "scripts"));
+            try
+            {
+                Directory.CreateSymbolicLink(Path.Combine(target, "scripts"), Path.Combine(source, "scripts"));
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                // Windows only lets admins, or Developer Mode, create symbolic links.
+                Assert.Skip("Can't create a symbolic link here: " + e.Message);
+            }
 
             Assert.Throws<InvalidOperationException>(() => AddonInstaller.Install(source, game));
             Assert.Equal("-- new", File.ReadAllText(Path.Combine(source, "scripts", "vscripts", "kcom_interval.lua")));
