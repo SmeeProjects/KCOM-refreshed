@@ -33,14 +33,18 @@ namespace KiwisCoOpMod
     {
         public static readonly ServerProgram instance = new();
         public WebSocketServer? wss;
+        // Only read or change connections (and everything handed to the gamemode, plugins and Lua)
+        // on WorkQueue.Server: the public methods below post their work there (UPGRADE_PLAN.md B2).
         public List<IndexedClient> connections = new() { };
         public Type? gamemodeType;
         public List<Type> plugins = new();
         public Channel channel = new("SV", "Server", Color.Olive);
         public int tickrate = 66;
-        public bool executeThink = false;
+        public volatile bool executeThink = false;
+        private CancellationTokenSource? thinkCancel;
         public void Tick()
         {
+            Debug.Assert(WorkQueue.Server.IsCurrentThread);
             PluginHandler.Handle(plugins, PluginHandleType.Server_PreGamemode_Think, tickrate, connections, Map.map);
             LuaEnvironment.instance.Handle(PluginHandleType.Server_PreGamemode_Think, tickrate, connections, Map.map);
             if (GamemodeHandler.Handle(gamemodeType, GamemodeHandleType.Think, tickrate, connections, Map.map) == HandleState.Continue)
@@ -49,7 +53,13 @@ namespace KiwisCoOpMod
                 LuaEnvironment.instance.Handle(PluginHandleType.Server_PostGamemode_Think, tickrate, connections, Map.map);
             }
         }
-        public void Start(Type type, List<Type> plugins)
+        // Completes once the server is listening (or failed to start). Never wait on it on the UI thread:
+        // the start handlers Invoke it.
+        public Task Start(Type type, List<Type> plugins)
+        {
+            return WorkQueue.Server.RunAsync(() => StartOnServerThread(type, plugins));
+        }
+        private void StartOnServerThread(Type type, List<Type> plugins)
         {
             if (wss == null)
             {
@@ -68,8 +78,8 @@ namespace KiwisCoOpMod
                     wss.Start(socket =>
                     {
                         //socket.OnOpen = () => OnOpen(socket);
-                        socket.OnClose = () => OnClose(socket);
-                        socket.OnMessage = message => OnMessage(message, socket);
+                        socket.OnClose = () => WorkQueue.Server.Post(() => OnClose(socket));
+                        socket.OnMessage = message => WorkQueue.Server.Post(() => OnMessage(message, socket));
                     });
                     if (gamemodeType != null)
                     {
@@ -81,13 +91,21 @@ namespace KiwisCoOpMod
                         LuaEnvironment.instance.Handle(PluginHandleType.Server_PostGamemode_PostStart, gamemodeType, plugins, Map.map);
                     }
                     executeThink = true;
-                    // Tick/thinking
-                    Task.Run(() =>
+                    // Tick/thinking: each tick runs on the server thread, and the next one waits for it.
+                    // The token stops this loop even if the server is started again before it notices.
+                    thinkCancel?.Cancel();
+                    CancellationTokenSource cancel = new();
+                    thinkCancel = cancel;
+                    Task.Run(async () =>
                     {
-                        while (executeThink)
+                        while (!cancel.IsCancellationRequested)
                         {
-                            Tick();
-                            Thread.Sleep(tickrate);
+                            await WorkQueue.Server.RunAsync(() =>
+                            {
+                                if (executeThink && !cancel.IsCancellationRequested)
+                                    Tick();
+                            });
+                            await Task.Delay(tickrate);
                         }
                     });
                 }
@@ -96,6 +114,13 @@ namespace KiwisCoOpMod
         public void Close()
         {
             executeThink = false;
+            WorkQueue.Server.Post(CloseOnServerThread);
+        }
+        private void CloseOnServerThread()
+        {
+            executeThink = false;
+            thinkCancel?.Cancel();
+            thinkCancel = null;
             if (wss != null)
             {
                 if (gamemodeType != null)
@@ -118,6 +143,10 @@ namespace KiwisCoOpMod
         }
         public void ChangeMap(string map)
         {
+            WorkQueue.Server.Post(() => ChangeMapOnServerThread(map));
+        }
+        private void ChangeMapOnServerThread(string map)
+        {
             Map.map = map;
             Response output2 = new("command", "addon_play " + map);
             foreach (IndexedClient con in connections)
@@ -127,14 +156,20 @@ namespace KiwisCoOpMod
         }
         public void GlobalVConsole(string command)
         {
+            WorkQueue.Server.Post(() => GlobalVConsoleOnServerThread(command));
+        }
+        private void GlobalVConsoleOnServerThread(string command)
+        {
             Response output2 = new("command", command);
             foreach (IndexedClient con in connections)
             {
                 con.Session.Send(JsonConvert.SerializeObject(output2));
             }
         }
+        // OnOpen, OnClose and OnMessage run on WorkQueue.Server.
         public void OnOpen(IWebSocketConnection socket)
         {
+            Debug.Assert(WorkQueue.Server.IsCurrentThread);
             foreach (IndexedClient client in connections)
             {
                 if (client.Session.ConnectionInfo.Id == socket.ConnectionInfo.Id)
@@ -159,6 +194,7 @@ namespace KiwisCoOpMod
         }
         public void OnClose(IWebSocketConnection socket)
         {
+            Debug.Assert(WorkQueue.Server.IsCurrentThread);
             foreach(IndexedClient client in connections.ToList())
             {
                 if(client.Session.ConnectionInfo.Id == socket.ConnectionInfo.Id)
@@ -185,6 +221,10 @@ namespace KiwisCoOpMod
 
         public void Command(List<string> command)
         {
+            WorkQueue.Server.Post(() => CommandOnServerThread(command));
+        }
+        private void CommandOnServerThread(List<string> command)
+        {
             if (gamemodeType != null)
             {
                 PluginHandler.Handle(plugins, PluginHandleType.Server_PreGamemode_Command, command, connections, gamemodeType);
@@ -198,6 +238,7 @@ namespace KiwisCoOpMod
         }
         public void OnMessage(string message, IWebSocketConnection socket)
         {
+            Debug.Assert(WorkQueue.Server.IsCurrentThread);
             Response ? response = JsonConvert.DeserializeObject<Response>(message);
             if (gamemodeType != null && response != null && response.type != null)
             {

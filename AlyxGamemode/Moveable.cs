@@ -16,6 +16,7 @@
 using KiwisCoOpModCore;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Timers;
 using System.Text;
 using Newtonsoft.Json;
@@ -29,6 +30,8 @@ namespace AlyxGamemode
         private Entity MovedObject;
         private readonly System.Timers.Timer Tracker;
         private bool TimedOut;
+        // Bumped by Update, so a timer that fired just before it doesn't time out the new hold.
+        private int Generation;
         public Moveable(Entity MovedObject, Guid ClientID, List<IndexedClient> Connections)
         {
             this.MovedObject = MovedObject;
@@ -46,11 +49,20 @@ namespace AlyxGamemode
             this.ClientID = ClientID;
             this.Connections = Connections;
             TimedOut = false;
+            Interlocked.Increment(ref Generation);
             Tracker.Stop();
             Tracker.Start();
         }
+        // The timer fires on a thread-pool thread: the connection list is only read on the server thread (UPGRADE_PLAN.md B2).
         private void Track(object? sender, System.Timers.ElapsedEventArgs e)
         {
+            int generation = Volatile.Read(ref Generation);
+            WorkQueue.Server.Post(() => TrackOnServerThread(generation));
+        }
+        private void TrackOnServerThread(int generation)
+        {
+            if (generation != Generation)
+                return;
             IndexedClient? client = Connections.Find(c => c.Session.ConnectionInfo.Id != ClientID);
             Response response = new("command", "kcom_grace " + MovedObject.Name);
             if (client != null)

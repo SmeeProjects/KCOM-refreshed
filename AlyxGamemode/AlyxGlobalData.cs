@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 
 namespace AlyxGamemode
 {
+    // Only used from the gamemode's handlers, which all run on WorkQueue.Server, so these lists need no lock (UPGRADE_PLAN.md B2).
     public sealed class AlyxGlobalData
     {
         public static readonly AlyxGlobalData instance = new();
