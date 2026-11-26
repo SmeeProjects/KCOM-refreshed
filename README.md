@@ -30,9 +30,14 @@
 
 ## Installation
 
-- Copy the [game addon](WorkshopAddon/game/hlvr_addons/kiwimp_alyx) folder `WorkshopAddon/game/hlvr_addons/kiwimp_alyx` from this repository into Half-Life: Alyx's `game/hlvr_addons` folder (create `hlvr_addons` if it doesn't exist). The Steam Workshop item has been removed, so the addon is installed by hand.
 - Download the [latest release](https://github.com/TeamPopplio/KCOM/releases) from GitHub
 - Extract the contents of the zip file to a safe place (e.g. a new folder on your desktop)
+- Install the game addon (the Steam Workshop item has been removed), in one of these ways:
+	- Open KCOM using `KiwisCoOpMod.exe` and click "File" > "Install Addon". KCOM finds Half-Life: Alyx in your Steam libraries, or asks you for its folder.
+	- Or right-click `install-addon.ps1` in the KCOM folder and select "Run with PowerShell". From a clone of this repository, run `powershell -ExecutionPolicy Bypass -File tools\install-addon.ps1` (add `-GamePath "<Half-Life Alyx folder>"` if Steam's libraries don't list the game).
+	- Or copy the [game addon](WorkshopAddon/game/hlvr_addons/kiwimp_alyx) folder `kiwimp_alyx` into Half-Life: Alyx's `game/hlvr_addons` folder by hand (create `hlvr_addons` if it doesn't exist).
+	- Note: installing again replaces the addon's folder with the new version. A folder linked to a clone (see [Symlinks](#symlinks)) is left alone.
+	- Note: the addon's sounds and the `mp_kiwitest` test map aren't compiled yet, so they don't work without the Workshop Tools (see `UPGRADE_PLAN.md` W10).
 - Set the following launch options for Half-Life: Alyx in Steam: `-console -vconsole -language english`
 - Launch the game
 - Open KCOM using `KiwisCoOpMod.exe`
