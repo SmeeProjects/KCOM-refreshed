@@ -13,20 +13,17 @@
     SOFTWARE.
     -----------------------------------------------------------------------------
 */
-using KiwisCoOpModCore;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 // https://stackoverflow.com/a/2784979
 
-namespace KiwisCoOpMod
+namespace KiwisCoOpModCore
 {
     public delegate void MessageAvailableEventHandler(object sender,
     MessageAvailableEventArgs e);
+
+    public delegate void StreamFaultedEventHandler(object sender, Exception e);
 
     public class MessageAvailableEventArgs : EventArgs
     {
@@ -37,18 +34,21 @@ namespace KiwisCoOpMod
         }
 
         public string MessageType { get; private set; }
+        // The packet's payload, after its 12-byte header (VConsoleFraming).
         public byte[] Data { get; private set;}
     }
     public class StreamWatcher
     {
         private readonly Stream stream;
 
-        private bool working = false;
+        private volatile bool working = false;
 
         public StreamWatcher(Stream stream)
         {
             this.stream = stream;
         }
+
+        public bool IsWorking => working;
 
         public void SetWorking(bool state)
         {
@@ -63,41 +63,48 @@ namespace KiwisCoOpMod
             MessageAvailable?.Invoke(this, e);
         }
 
+        protected void OnFaulted(Exception e)
+        {
+            Faulted?.Invoke(this, e);
+        }
+
         protected async void Read()
         {
             while (working)
             {
-                if (stream != null)
+                VConsolePacket packet;
+                try
                 {
-                    try
+                    packet = await VConsoleFraming.ReadPacketAsync(stream);
+                }
+                catch (Exception e)
+                {
+                    // The stream ended, broke or got out of sync (B4): reading on would only
+                    // spin or misread every later packet, so stop and let the owner reconnect.
+                    // Nothing to report when SetWorking(false) closed it on purpose.
+                    bool wasWorking = working;
+                    working = false;
+                    if (wasWorking)
                     {
-                        byte[] headerBuffer = new byte[10];
-                        await stream.ReadExactlyAsync(headerBuffer);
-                        byte[] type = new byte[4] {
-                            headerBuffer[0], headerBuffer[1], headerBuffer[2], headerBuffer[3]
-                        };
-                        string commandType = Encoding.ASCII.GetString(type);
-                        byte length = (byte)(headerBuffer[9] - headerBuffer.Length);
-                        byte[] data = new byte[length];
-                        await stream.ReadExactlyAsync(data.AsMemory(0, length));
-                        OnMessageAvailable(new MessageAvailableEventArgs(commandType, data));
+                        Log.Warning("VConsole", "Connection to VConsole lost", e);
+                        OnFaulted(e);
                     }
-                    catch (Exception e) when (e is IOException or ObjectDisposedException)
-                    {
-                        // The stream is gone (the game closed, or Disconnect closed it): reading again
-                        // would only fail again, so stop instead of spinning.
-                        if (working)
-                            Log.Warning("VConsole", "Connection to VConsole lost", e);
-                        working = false;
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Error("VConsole", e, "Failed to handle a VConsole message");
-                    }
+                    return;
+                }
+                try
+                {
+                    OnMessageAvailable(new MessageAvailableEventArgs(packet.Type, packet.Payload));
+                }
+                catch (Exception e)
+                {
+                    // A failing handler must not stop reading.
+                    Log.Error("VConsole", e, "Failed to handle a VConsole message");
                 }
             }
         }
 
         public event MessageAvailableEventHandler? MessageAvailable;
+        // Raised once when reading stops on an error; the watcher is then no longer working.
+        public event StreamFaultedEventHandler? Faulted;
     }
 }
