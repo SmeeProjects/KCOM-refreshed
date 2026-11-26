@@ -27,9 +27,10 @@ import('System')
 import('Newtonsoft.Json, Version=13.0.1`, Culture=neutral')
 import('Newtonsoft.Json')
 json = require('scripts/include/json')
-lua_env = {}
-lua_env.persistence = {}
-lua_env.handlers = {}
+-- Kept when refresh_all() runs the scripts again: the players' data is only filled in when they join.
+lua_env = lua_env or {}
+lua_env.persistence = lua_env.persistence or {}
+lua_env.handlers = lua_env.handlers or {}
 print = function(...)
     local channel = Channel('LUA', 'Lua Scripting', Color.CornflowerBlue)
     -- Lua runs on its own thread: LogToOutput passes the text to the UI thread without waiting for it.
