@@ -31,6 +31,8 @@ namespace KiwisCoOpMod
     {
         public ClientProgram clientProgram;
         private bool started = false;
+        // Changes on every Start and Stop, so a start that finishes late doesn't touch a newer session.
+        private int startGeneration = 0;
         private DateTime startTime;
         private readonly Channel channel = new("KCOM", "Kiwi's Co-Op Mod", Color.Purple);
         private readonly Random random = new();
@@ -247,17 +249,35 @@ namespace KiwisCoOpMod
                 SetStatus(Color.Green, "Active");
                 startTime = DateTime.Now;
                 LogToOutput(channel, "Starting at " + startTime.ToString(@"hh\:mm\:ss"));
-                if (checkBoxServerEnabled.Checked)
-                    ServerProgram.instance.Start(gamemodeType, plugins);
-                if (checkBoxClientEnabled.Checked)
+                int generation = ++startGeneration;
+                bool startClient = checkBoxClientEnabled.Checked;
+                void FinishStart()
                 {
-                    clientProgram.Start(plugins);
+                    if (!started || generation != startGeneration)
+                        return;
+                    if (startClient)
+                    {
+                        clientProgram.Start(plugins);
+                    }
+                    PluginHandler.Handle(plugins, PluginHandleType.UserInterface_PostStart, this);
+                    LuaEnvironment.instance.Handle(PluginHandleType.UserInterface_PostStart, this);
                 }
-                PluginHandler.Handle(plugins, PluginHandleType.UserInterface_PostStart, this);
-                LuaEnvironment.instance.Handle(PluginHandleType.UserInterface_PostStart, this);
+                if (checkBoxServerEnabled.Checked)
+                {
+                    // The server starts on its own thread, and its start handlers Invoke this one: start the
+                    // client (a listen server's connects to it) only once it is listening, without waiting here (UPGRADE_PLAN.md B2).
+                    ServerProgram.instance.Start(gamemodeType, plugins).ContinueWith(_ =>
+                    {
+                        if (!IsDisposed)
+                            BeginInvoke(FinishStart);
+                    }, TaskScheduler.Default);
+                }
+                else
+                    FinishStart();
             }
             else
             {
+                startGeneration++;
                 PluginHandler.Handle(plugins, PluginHandleType.UserInterface_PreClose, this);
                 LuaEnvironment.instance.Handle(PluginHandleType.UserInterface_PreClose, this);
                 buttonStart.Text = "Start";

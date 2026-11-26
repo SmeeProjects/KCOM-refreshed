@@ -44,6 +44,7 @@ namespace KiwisCoOpMod
         private CancellationTokenSource? thinkCancel;
         public void Tick()
         {
+            Debug.Assert(WorkQueue.Server.IsCurrentThread);
             PluginHandler.Handle(plugins, PluginHandleType.Server_PreGamemode_Think, tickrate, connections, Map.map);
             LuaEnvironment.instance.Handle(PluginHandleType.Server_PreGamemode_Think, tickrate, connections, Map.map);
             if (GamemodeHandler.Handle(gamemodeType, GamemodeHandleType.Think, tickrate, connections, Map.map) == HandleState.Continue)
@@ -52,9 +53,11 @@ namespace KiwisCoOpMod
                 LuaEnvironment.instance.Handle(PluginHandleType.Server_PostGamemode_Think, tickrate, connections, Map.map);
             }
         }
-        public void Start(Type type, List<Type> plugins)
+        // Completes once the server is listening (or failed to start). Never wait on it on the UI thread:
+        // the start handlers Invoke it.
+        public Task Start(Type type, List<Type> plugins)
         {
-            WorkQueue.Server.Post(() => StartOnServerThread(type, plugins));
+            return WorkQueue.Server.RunAsync(() => StartOnServerThread(type, plugins));
         }
         private void StartOnServerThread(Type type, List<Type> plugins)
         {
@@ -166,6 +169,7 @@ namespace KiwisCoOpMod
         // OnOpen, OnClose and OnMessage run on WorkQueue.Server.
         public void OnOpen(IWebSocketConnection socket)
         {
+            Debug.Assert(WorkQueue.Server.IsCurrentThread);
             foreach (IndexedClient client in connections)
             {
                 if (client.Session.ConnectionInfo.Id == socket.ConnectionInfo.Id)
@@ -190,6 +194,7 @@ namespace KiwisCoOpMod
         }
         public void OnClose(IWebSocketConnection socket)
         {
+            Debug.Assert(WorkQueue.Server.IsCurrentThread);
             foreach(IndexedClient client in connections.ToList())
             {
                 if(client.Session.ConnectionInfo.Id == socket.ConnectionInfo.Id)
@@ -233,6 +238,7 @@ namespace KiwisCoOpMod
         }
         public void OnMessage(string message, IWebSocketConnection socket)
         {
+            Debug.Assert(WorkQueue.Server.IsCurrentThread);
             Response ? response = JsonConvert.DeserializeObject<Response>(message);
             if (gamemodeType != null && response != null && response.type != null)
             {
