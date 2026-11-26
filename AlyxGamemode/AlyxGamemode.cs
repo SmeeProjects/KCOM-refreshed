@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Threading;
+using System.Threading.Tasks;
 
 namespace AlyxGamemode
 {
@@ -232,15 +232,13 @@ namespace AlyxGamemode
                                                             socket.Send(JsonConvert.SerializeObject(vconsoleInput2));
                                                             break;
                                                         case PacketType.InitializedEntities:
-                                                            Thread thr = new(new ThreadStart(() =>
+                                                            _ = Task.Delay(2500).ContinueWith(_ =>
                                                             {
-                                                                Thread.Sleep(2500);
                                                                 Response vconsoleInput5 = new("command", "buddha 1;unpause;ent_fire kcom_timer addoutput OnTimer>kcom_script>CallScriptFunction>KiwisCoOpMod>0>-1");
                                                                 Response output4 = new("status", "Co-op initialized!");
                                                                 socket.Send(JsonConvert.SerializeObject(output4));
                                                                 socket.Send(JsonConvert.SerializeObject(vconsoleInput5));
-                                                            }));
-                                                            thr.Start();
+                                                            }, TaskScheduler.Default);
                                                             break;
                                                         case PacketType.RightHandIndexes:
                                                         case PacketType.LeftHandIndexes:
