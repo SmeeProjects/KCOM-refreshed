@@ -180,7 +180,7 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 
 **Fix:** use `CultureInfo.InvariantCulture` in every `ToString`/`Parse`. As a one-line stopgap, set `CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture` in `Program.Main`. Add unit tests that run under `fr-FR`.
 
-**Done** (#10): `KiwisCoOpModCore/GameNumber.cs` formats and parses with the invariant culture, and `Vector`, `Angle` and every `float.Parse`/`int.Parse` of game data in `AlyxGamemode.cs` use it. The other parses already passed `InvariantCulture.NumberFormat`, but with the default `NumberStyles`, which allows thousands separators and reads `12,5` as `125`: `GameNumber` uses `NumberStyles.Float`. `Program.Main` sets the invariant culture as the backstop. Tests run under `fr-FR` (`KiwisCoOpModCore.Tests/GameNumberTests.cs`). The in-game check (host on `fr-FR`) is in phase 1's exit issue (#17).
+**Done** (#10): `KiwisCoOpModCore/GameNumber.cs` formats and parses with the invariant culture, and `Vector`, `Angle` and every `float.Parse`/`int.Parse` of game data in `AlyxGamemode.cs` use it. The other parses already passed `InvariantCulture.NumberFormat`, but with the default `NumberStyles`, which allows thousands separators and reads `12,5` as `125`: `GameNumber` uses `NumberStyles.Float`. `Program.Main` sets the invariant culture as the backstop. Tests run under `fr-FR` (`KiwisCoOpModCore.Tests/GameNumberTests.cs`). Checked in game in phase 1's first session (#17): with the host on `fr-FR`, heads, name text, hands, teleports, moved props and `kcom_hud` all land right.
 
 ### B2. High: shared lists aren't thread-safe (`agent-ok`)
 
