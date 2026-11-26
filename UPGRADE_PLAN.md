@@ -288,5 +288,5 @@ Each phase is a parent issue under #5, with one issue per item. Each phase ends 
    - Replace console-text parsing with a structured message format, together with B6's English-only join matching.
    - W10 (compiled addon assets), W12 (SmartScreen).
 5. **The in-game test issue at the end of each phase** (`needs-game`)
-   - Once every other issue of the phase is closed, a run on the exit issue gathers the "In-game checks (phase exit)" sections of the phase's merged pull requests into one checklist in the exit issue (no copying by hand).
-   - The maintainer runs that whole checklist in one two-player session on a campaign map, for example `a3_hotel_lobby_basement`, together with `tools/check-game-compat.ps1`, then closes the issue.
+   - Once every other issue of the phase is closed, a run on the exit issue gathers the "In-game checks (phase exit)" sections of the phase's merged pull requests into one checklist in the exit issue (no copying by hand). Phase 1's pull requests from before #56 used "Manual test" or "Manual check" headings; #17 gathered those too.
+   - The maintainer runs that whole checklist in one two-player session on a campaign map, for example `a3_hotel_lobby_basement`, together with `tools/check-game-compat.ps1` once phase 3 has added it (phases 1 and 2 run without it), then closes the issue.
