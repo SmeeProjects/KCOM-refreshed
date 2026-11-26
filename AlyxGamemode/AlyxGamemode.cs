@@ -18,7 +18,6 @@ using KiwisCoOpModCore;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -138,16 +137,16 @@ namespace AlyxGamemode
                                                             break;
                                                         case PacketType.Teleport:
                                                             Vector TeleOrigin = new(
-                                                                float.Parse(packet.args[0], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[1], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[2], CultureInfo.InvariantCulture.NumberFormat)
+                                                                GameNumber.ParseFloat(packet.args[0]),
+                                                                GameNumber.ParseFloat(packet.args[1]),
+                                                                GameNumber.ParseFloat(packet.args[2])
                                                             );
                                                             Angle TeleAngles = new(
-                                                                float.Parse(packet.args[3], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[4], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[5], CultureInfo.InvariantCulture.NumberFormat)
+                                                                GameNumber.ParseFloat(packet.args[3]),
+                                                                GameNumber.ParseFloat(packet.args[4]),
+                                                                GameNumber.ParseFloat(packet.args[5])
                                                             );
-                                                            Response teleport = new("command", "kcom_teleportangles " + TeleOrigin.X + " " + TeleOrigin.Y + " " + TeleOrigin.Z + " " + TeleAngles.Pitch + " " + TeleAngles.Yaw + " " + TeleAngles.Roll);
+                                                            Response teleport = new("command", "kcom_teleportangles " + TeleOrigin + " " + TeleAngles);
                                                             foreach (IndexedClient broadcastClient2 in connections)
                                                             {
                                                                 Player? keyValuePair = AlyxGlobalData.instance.GetPlayer(broadcastClient2.Session.ConnectionInfo.Id);
@@ -159,14 +158,14 @@ namespace AlyxGamemode
                                                             break;
                                                         case PacketType.HeadPosAng:
                                                             Vector HeadOrigin = new(
-                                                                float.Parse(packet.args[0], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[1], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[2], CultureInfo.InvariantCulture.NumberFormat)
+                                                                GameNumber.ParseFloat(packet.args[0]),
+                                                                GameNumber.ParseFloat(packet.args[1]),
+                                                                GameNumber.ParseFloat(packet.args[2])
                                                             );
                                                             Angle HeadAngles = new(
-                                                                float.Parse(packet.args[3], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[4], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[5], CultureInfo.InvariantCulture.NumberFormat)
+                                                                GameNumber.ParseFloat(packet.args[3]),
+                                                                GameNumber.ParseFloat(packet.args[4]),
+                                                                GameNumber.ParseFloat(packet.args[5])
                                                             );
                                                             Vector HatOrigin = new(
                                                                 HeadOrigin.X,
@@ -194,24 +193,24 @@ namespace AlyxGamemode
                                                             break;
                                                         case PacketType.HandPosAng:
                                                             Vector LeftHandOrigin = new(
-                                                                float.Parse(packet.args[0], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[1], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[2], CultureInfo.InvariantCulture.NumberFormat)
+                                                                GameNumber.ParseFloat(packet.args[0]),
+                                                                GameNumber.ParseFloat(packet.args[1]),
+                                                                GameNumber.ParseFloat(packet.args[2])
                                                             );
                                                             Angle LeftHandAngles = new(
-                                                                float.Parse(packet.args[3], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[4], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[5], CultureInfo.InvariantCulture.NumberFormat)
+                                                                GameNumber.ParseFloat(packet.args[3]),
+                                                                GameNumber.ParseFloat(packet.args[4]),
+                                                                GameNumber.ParseFloat(packet.args[5])
                                                             );
                                                             Vector RightHandOrigin = new(
-                                                                float.Parse(packet.args[6], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[7], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[8], CultureInfo.InvariantCulture.NumberFormat)
+                                                                GameNumber.ParseFloat(packet.args[6]),
+                                                                GameNumber.ParseFloat(packet.args[7]),
+                                                                GameNumber.ParseFloat(packet.args[8])
                                                             );
                                                             Angle RightHandAngles = new(
-                                                                float.Parse(packet.args[9], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[10], CultureInfo.InvariantCulture.NumberFormat),
-                                                                float.Parse(packet.args[11], CultureInfo.InvariantCulture.NumberFormat)
+                                                                GameNumber.ParseFloat(packet.args[9]),
+                                                                GameNumber.ParseFloat(packet.args[10]),
+                                                                GameNumber.ParseFloat(packet.args[11])
                                                             );
                                                             Response movementLeftHand = new("command", "kcom_setlocation_nonuuid kcom_lefthand_" + player.Index + " " + LeftHandOrigin + " " + LeftHandAngles);
                                                             Response movementRightHand = new("command", "kcom_setlocation_nonuuid kcom_righthand_" + player.Index + " " + RightHandOrigin + " " + RightHandAngles);
@@ -253,7 +252,7 @@ namespace AlyxGamemode
                                                         case PacketType.PhysicsObjectPosAng:
                                                             if (packet.args.Length >= 7)
                                                             {
-                                                                Entity entity = new(packet.args[0], float.Parse(packet.args[1]), float.Parse(packet.args[2]), float.Parse(packet.args[3]), float.Parse(packet.args[4]), float.Parse(packet.args[5]), float.Parse(packet.args[6]));
+                                                                Entity entity = new(packet.args[0], GameNumber.ParseFloat(packet.args[1]), GameNumber.ParseFloat(packet.args[2]), GameNumber.ParseFloat(packet.args[3]), GameNumber.ParseFloat(packet.args[4]), GameNumber.ParseFloat(packet.args[5]), GameNumber.ParseFloat(packet.args[6]));
                                                                 if (AlyxGlobalData.instance.AddManipulatedEntity(entity, socket.ConnectionInfo.Id, connections))
                                                                 {
                                                                     Response output4 = new("command", "kcom_setlocation " + packet.args[0] + " " + packet.args[1] + " " + packet.args[2] + " " + packet.args[3] + " " + packet.args[4] + " " + packet.args[5] + " " + packet.args[6]);
@@ -289,7 +288,7 @@ namespace AlyxGamemode
                                                             Response output2 = new("status", "♫ Detected map: " + packet.args[0] + suffix);
                                                             socket.Send(JsonConvert.SerializeObject(jingle));
                                                             socket.Send(JsonConvert.SerializeObject(output2));
-                                                            int gamemodeAPIVersion = int.Parse(packet.args[1]);
+                                                            int gamemodeAPIVersion = GameNumber.ParseInt(packet.args[1]);
                                                             if (gamemodeAPIVersion != APIVersion)
                                                             {
                                                                 Response versionOutput = new("status", "Version mismatch! This client reports API version " + APIVersion + ", gamemode reported API version " + gamemodeAPIVersion + ". Please update the client and respective Workshop addons.");

@@ -16,6 +16,7 @@
 using KiwisCoOpModCore;
 using Microsoft.Win32;
 using System;
+using System.Globalization;
 using System.Windows.Forms;
 using System.Configuration;
 
@@ -32,6 +33,10 @@ namespace KiwisCoOpMod
         [STAThread]
         static void Main(string[] args)
         {
+            // Backstop for B1 (UPGRADE_PLAN.md): numbers sent to the game must use "." for decimals.
+            // GameNumber does this explicitly; this covers any formatting that still uses the current culture.
+            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.SetHighDpiMode(HighDpiMode.DpiUnaware);
