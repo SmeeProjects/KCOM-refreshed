@@ -22,10 +22,10 @@ namespace KiwisCoOpMod
 {
     // Lua runs only on its own thread (UPGRADE_PLAN.md B3): an NLua state can't be used from two threads,
     // and running it on the UI thread made every network message wait for the window.
-    // The server and client socket threads wait for each handler, so the Lua handlers keep their order
-    // around the gamemode's and only touch the server's lists while the server thread waits for them (B2).
-    // The UI thread never waits for Lua: its handlers are only queued. Lua must not Invoke the UI either:
-    // LogToOutput and SetStatus can be called from any thread.
+    // Every caller waits for its handler, so a Pre* handler still runs before what it precedes, the Lua
+    // handlers keep their order around the gamemode's, and they only touch the server's lists while the
+    // server thread waits for them (B2). The Lua thread never waits for another one, so this can't deadlock:
+    // Lua must not Invoke the UI, and LogToOutput, LogToOutputGeneric and SetStatus work from any thread.
     public sealed class LuaEnvironment
     {
         public static readonly LuaEnvironment instance = new();
@@ -54,14 +54,20 @@ namespace KiwisCoOpMod
             queue.Post(lua.Dispose);
             queue.Complete();
         }
-        // Runs the action on the Lua thread: at once when already there, queued from the UI thread,
-        // and waited for from any other thread.
+        // How long the UI thread waits for Lua. A script that still Invokes the window (an old __init.lua's
+        // print) would otherwise hang both threads; past this the UI thread goes on and the handler runs late.
+        private static readonly TimeSpan uiWaitTimeout = TimeSpan.FromSeconds(2);
+        // Runs the action on the Lua thread and returns once it has run (at once when already there).
         private void OnLuaThread(Action action)
         {
-            if (Thread.CurrentThread == Program.uiThread)
-                queue.Post(action);
-            else
+            if (Thread.CurrentThread != Program.uiThread)
                 queue.Run(action);
+            // While the window is being built, Program.userInterface is still null and the Lua startup
+            // waits for it: only queue (UserInterface_Initialized).
+            else if (Program.userInterface == null)
+                queue.Post(action);
+            else if (!queue.Run(action, uiWaitTimeout))
+                Log.Warning("Lua", "A Lua handler took over " + uiWaitTimeout.TotalSeconds + " s, so the window stopped waiting for it. Scripts must not call Invoke.");
         }
         public void LoadFiles()
         {

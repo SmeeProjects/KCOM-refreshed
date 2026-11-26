@@ -58,17 +58,15 @@ namespace KiwisCoOpMod
             if (ws != null && vConsole != null)
             {
                 ui.LogToOutput(channel, "Connecting to VConsole using port " + Settings.Default.VconsolePort);
+                // Only called on the UI thread (Start), so the dialog needs no Invoke.
                 if (!vConsole.Connect(ws))
                 {
-                    ui.Invoke(() =>
-                    {
-                        ui.LogToOutput(channel, "Failed to connect to VConsole");
-                        DialogResult res = MessageBox.Show("An error occured while connecting to VConsole.\nMake sure that Half-Life: Alyx is open.\nWould you like to re-connect?", "Error", MessageBoxButtons.YesNo);
-                        if (res == DialogResult.Yes)
-                            ConnectVConsole(ws);
-                        else
-                            ui.LogToOutput(channel, "Disconnected from VConsole");
-                    });
+                    ui.LogToOutput(channel, "Failed to connect to VConsole");
+                    DialogResult res = MessageBox.Show("An error occured while connecting to VConsole.\nMake sure that Half-Life: Alyx is open.\nWould you like to re-connect?", "Error", MessageBoxButtons.YesNo);
+                    if (res == DialogResult.Yes)
+                        ConnectVConsole(ws);
+                    else
+                        ui.LogToOutput(channel, "Disconnected from VConsole");
                 }
             }
         }

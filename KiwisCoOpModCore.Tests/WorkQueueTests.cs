@@ -190,6 +190,29 @@ namespace KiwisCoOpModCore.Tests
         }
 
         [Fact]
+        public async Task Run_WithTimeout_StopsWaiting_AndTheWorkStillRunsLater()
+        {
+            // The UI thread waits like this, so an old script that Invokes the window can't hang it for good.
+            WorkQueue queue = new("timeout");
+            using ManualResetEventSlim release = new();
+            bool ran = false;
+
+            bool done = await Task.Run(() => queue.Run(() =>
+            {
+                release.Wait();
+                ran = true;
+            }, TimeSpan.FromMilliseconds(50)), TestContext.Current.CancellationToken).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+            Assert.False(done);
+            Assert.False(ran);
+            release.Set();
+            await queue.RunAsync(() => { }).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            Assert.True(ran);
+            Assert.True(await Task.Run(() => queue.Run(() => { }, Timeout), TestContext.Current.CancellationToken));
+            queue.Complete();
+        }
+
+        [Fact]
         public void Run_AfterComplete_ReturnsWithoutRunning()
         {
             WorkQueue queue = new("closed");

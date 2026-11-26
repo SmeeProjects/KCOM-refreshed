@@ -79,6 +79,12 @@ namespace KiwisCoOpModCore
         // Its errors go to onError. Never call it from a thread the queued work waits for (such as Invoke).
         public void Run(Action action)
         {
+            Run(action, System.Threading.Timeout.InfiniteTimeSpan);
+        }
+
+        // Same, but stops waiting after the timeout and returns false: the action then still runs later.
+        public bool Run(Action action, TimeSpan timeout)
+        {
             if (IsCurrentThread)
             {
                 try
@@ -89,9 +95,9 @@ namespace KiwisCoOpModCore
                 {
                     ReportError(e);
                 }
+                return true;
             }
-            else
-                RunAsync(action).GetAwaiter().GetResult();
+            return RunAsync(action).Wait(timeout);
         }
 
         // Stops accepting work. What is already queued still runs, then the thread ends.
