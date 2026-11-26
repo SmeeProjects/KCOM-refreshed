@@ -64,7 +64,7 @@ function KiwisCoOpMod()
                     if not string.find(object.class, "trigger_") and not string.find(object.class, "func_") then
                         local origin = entity:GetAbsOrigin();
                         local angles = entity:GetAnglesAsVector();
-                        if object.class == "prop_door_rotating_physics" and (math.floor(angles[1]) ~= math.floor(object.angles[1])) or (math.floor(angles[2]) ~= math.floor(object.angles[2])) or (math.floor(angles[3]) ~= math.floor(object.angles[3])) then
+                        if object.class == "prop_door_rotating_physics" and ((math.floor(angles[1]) ~= math.floor(object.angles[1])) or (math.floor(angles[2]) ~= math.floor(object.angles[2])) or (math.floor(angles[3]) ~= math.floor(object.angles[3]))) then
                             print("PHYS "..object.name.." "..origin[1].." "..origin[2].." "..origin[3].." "..angles[1].." "..angles[2].." "..angles[3].." KCOM");
                             object.angles = angles;
                         elseif (math.floor(origin[1]) ~= math.floor(object.origin[1])) or (math.floor(origin[2]) ~= math.floor(object.origin[2])) or (math.floor(origin[3]) ~= math.floor(object.origin[3])) then
@@ -389,12 +389,12 @@ function KiwisCoOpMod()
         KCOM_OnCompletionD_Forward = function(params) fireit(params, "OnCompletionD_Forward") end
         KCOM_OnCompletionE_Forward = function(params) fireit(params, "OnCompletionE_Forward") end
         KCOM_OnCompletionF_Forward = function(params) fireit(params, "OnCompletionF_Forward") end
-        KCOM_OnCompletionA_Backward = function(params) fireit(params, "OnCompletionA_Forward") end
-        KCOM_OnCompletionB_Backward = function(params) fireit(params, "OnCompletionB_Forward") end
-        KCOM_OnCompletionC_Backward = function(params) fireit(params, "OnCompletionC_Forward") end
-        KCOM_OnCompletionD_Backward = function(params) fireit(params, "OnCompletionD_Forward") end
-        KCOM_OnCompletionE_Backward = function(params) fireit(params, "OnCompletionE_Forward") end
-        KCOM_OnCompletionF_Backward = function(params) fireit(params, "OnCompletionF_Forward") end
+        KCOM_OnCompletionA_Backward = function(params) fireit(params, "OnCompletionA_Backward") end
+        KCOM_OnCompletionB_Backward = function(params) fireit(params, "OnCompletionB_Backward") end
+        KCOM_OnCompletionC_Backward = function(params) fireit(params, "OnCompletionC_Backward") end
+        KCOM_OnCompletionD_Backward = function(params) fireit(params, "OnCompletionD_Backward") end
+        KCOM_OnCompletionE_Backward = function(params) fireit(params, "OnCompletionE_Backward") end
+        KCOM_OnCompletionF_Backward = function(params) fireit(params, "OnCompletionF_Backward") end
         KCOM_OnCompletionExitA = function(params) fireit(params, "OnCompletionExitA") end
         KCOM_OnCompletionExitB = function(params) fireit(params, "OnCompletionExitB") end
         KCOM_OnCompletionExitC = function(params) fireit(params, "OnCompletionExitC") end
@@ -731,8 +731,9 @@ function KiwisCoOpMod()
                     for _, entity in pairs(entities) do
                         local curhealth = entity:GetHealth();
                         if curhealth <= 0 then return end
-                        if health < curhealth then
-                            entity:SetHealth(tonumber(health));
+                        local targethealth = tonumber(health);
+                        if targethealth ~= nil and targethealth < curhealth then
+                            entity:SetHealth(targethealth);
                             local newhealth = entity:GetHealth();
                             if newhealth <= 0 then
                                 entity:SetHealth(0);
