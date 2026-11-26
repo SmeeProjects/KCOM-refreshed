@@ -1,0 +1,34 @@
+# The repo's image: the .NET 10 SDK, pwsh and luacheck on top of the base image (`dockerfile` grant).
+dockerfile: .deckhand/Dockerfile
+
+# Restore NuGet packages for the whole solution (EnableWindowsTargeting: the -windows projects build on Linux).
+setup: dotnet restore KCOM.sln -p:EnableWindowsTargeting=true
+
+# Keep NuGet packages between runs; the toolchain lives in the image.
+caches:
+  - /home/node/.nuget/packages
+
+# The repo has no AGENTS.md: how to build, test and lint on Linux, and how to follow UPGRADE_PLAN.md.
+instructions: .deckhand/instructions.md
+
+# The plan has many security items (S1–S5): review each pull request once it's ready, and fix what the review finds (2 rounds).
+review:
+  on: ready
+  fix: 2
+
+# W2/W5 touch every csproj, so pull requests will conflict as they merge: rebase Deckhand's own ones by themselves.
+conflicts:
+  check_minutes: 30
+
+# One run at a time until everything is correctly set up.
+max_parallel: 1
+
+# Comments on these two pinned issues become filed issues.
+inbox:
+  ideas: 2 # "Ideas"
+  bugs: 3 # "Bugs"
+
+# Deckhand starts the open issues labelled auto-pickup by itself (added next to agent-ok), in the operator's 1 slot.
+auto_pickup: true
+# Stop picking while 2 of its pull requests wait for your review, so conflicting branches don't pile up.
+auto_pickup_max_ready: 2
