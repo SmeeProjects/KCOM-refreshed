@@ -54,7 +54,9 @@ function KiwisCoOpMod()
         function uuid(name, x, y, z, classname)
             -- this system ensures that entities always have a unique ID
             -- it brings the most unique attributes of an entity together
-            return classname.."+"..name.."+"..math.floor(x).."+"..math.floor(y).."+"..math.floor(z);
+            -- packets and console commands split on spaces, so a name with spaces broke them
+            local safename = string.gsub(name, "[%s;\"]", "_");
+            return classname.."+"..safename.."+"..math.floor(x).."+"..math.floor(y).."+"..math.floor(z);
         end
 
         function KCOM_CacheSync()
@@ -316,7 +318,8 @@ function KiwisCoOpMod()
 
         local function KCOM_PickupSync(data)
             local handId = util.GetHandIdFromTip(data.vr_tip_attachment)
-            local hand = Player.Hands[handId + 1]
+            local hand = Player.Hands and Player.Hands[handId + 1]
+            if hand == nil then return end
             local ent_held = util.EstimateNearestEntity(data.item_name, data.item, hand:GetOrigin())
             if IsValidEntity(ent_held) then
                 KCOM_EntitySyncSpecific(ent_held)
