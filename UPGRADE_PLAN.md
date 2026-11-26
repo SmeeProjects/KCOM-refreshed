@@ -61,12 +61,12 @@ This is a record of how compatibility was checked, so it can be checked again af
 
 | Package | Used | Latest (2026-11) | Action |
 |---|---|---|---|
-| Newtonsoft.Json | 13.0.1 | 13.0.4 | Update. 13.0.1 already contains the fix for CVE-2024-21907. Keep Newtonsoft, because the Lua scripts `import` it by name (`base_scripts/base/__init.lua`). |
+| Newtonsoft.Json | 13.0.1 | 13.0.4 | **Updated** (#7). 13.0.1 already contains the fix for CVE-2024-21907. Keep Newtonsoft, because the Lua scripts `import` it by name (`base_scripts/base/__init.lua`). |
 | Websocket.Client | 4.4.43 | 5.5.1 | Maintained. Major-version jump: read the v5 release notes and adjust `ClientProgram.cs`. |
 | NLua | 1.6.0 | 1.7.9 | Update together with KeraLua. |
-| KeraLua (via NLua) | 1.3.1 | 1.4.11 | Its version is **hard-coded** in the copy steps in `KiwisCoOpMod.csproj`. Fix with W3 first. |
-| DiscordRichPresence | 1.0.175 | 1.6.1.70 | Update. Expect small API changes in `DiscordRpcPlugin.cs`. Its csproj copy path also hard-codes the version and `net35`. |
-| System.Drawing.Common | 6.0.2-mauipre (a preview build) | 10.0.x | Use 10.0.x, or remove it, since `Color` is part of the base framework. |
+| KeraLua (via NLua) | 1.3.1 | 1.4.11 | Comes with NLua. The copy steps no longer hard-code its version (W3). |
+| DiscordRichPresence | 1.0.175 | 1.6.1.70 | Update. Expect small API changes in `DiscordRpcPlugin.cs`. The copy step no longer hard-codes its version or `net35` (W3). |
+| System.Drawing.Common | 6.0.2-mauipre (a preview build) | 10.0.x | **Removed** (#7): `Color` is part of the base framework. |
 | **Fleck** (WebSocket server) | 1.2.0 | 1.2.0 (2021-04) | **Unmaintained.** It has no known security advisories, but no message-size limits or TLS support. Medium-term, replace it with ASP.NET Core (Kestrel) WebSockets. |
 | **Open.NAT** (UPnP) | 2.1.0 | 2.1.0 (2016-07) | **Unmaintained**, and built only for .NET Framework, which causes build warning NU1701. Replace it with a maintained UPnP/NAT-PMP library, or drop UPnP and document manual port forwarding. |
 
@@ -226,16 +226,16 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 | # | Today | Recommended | Label |
 |---|---|---|---|
 | W1 | Upstream is archived. | Keep this fork as the source of truth. Keep the MIT `LICENSE.md` and credit KiwifruitDev in the README. | — |
-| W2 | Each csproj repeats the framework, version and company settings. | Add `Directory.Build.props` (`net10.0-windows`, `Nullable`, `LangVersion`, `AnalysisLevel=latest-recommended`, version in one place) and `global.json` (SDK `10.0.4xx`). | `agent-ok` |
-| W3 | Copy steps hard-code `$(USERPROFILE)\.nuget\packages\nlua\1.6.0\...` and the KeraLua and DiscordRPC paths. They break on any version change and in CI. | Use `GeneratePathProperty="true"` on the `PackageReference` and copy from `$(PkgNLua)` / `$(PkgKeraLua)`, or just rely on normal copy-local. | `agent-ok` |
-| W4 | The `CopyDLLs` targets always copy into **both** `bin\Debug` and `bin\Release`. | Copy only into `$(Configuration)`. | `agent-ok` |
+| W2 | Each csproj repeats the framework, version and company settings. | Add `Directory.Build.props` (`net10.0-windows`, `Nullable`, `LangVersion`, `AnalysisLevel=latest`, version in one place) and `global.json` (SDK `10.0.4xx`). `latest-recommended` adds about 130 CA warnings, so it waits for W11. **Done** (#7). | `agent-ok` |
+| W3 | Copy steps hard-code `$(USERPROFILE)\.nuget\packages\nlua\1.6.0\...` and the KeraLua and DiscordRPC paths. They break on any version change and in CI. | Copy the DLLs NuGet resolved: `@(RuntimeCopyLocalItems)` / `@(RuntimeTargetsCopyLocalItems)` filtered on `%(NuGetPackageId)`. (`GeneratePathProperty` would still hard-code `lib\net6.0` and need a direct KeraLua reference.) **Done** (#7). | `agent-ok` |
+| W4 | The `CopyDLLs` targets always copy into **both** `bin\Debug` and `bin\Release`. | Copy only into `$(Configuration)`. **Done** (#7). | `agent-ok` |
 | W5 | Package versions are spread across four projects. | Central Package Management (`Directory.Packages.props`) plus `NuGetAuditMode=all`. | `agent-ok` |
 | W6 | No CI. | A GitHub Actions workflow on `windows-latest`: `setup-dotnet` 10.0.x, `dotnet build -c Release`, `dotnet test`, then `dotnet publish -r win-x64 --self-contained`, zipped with the addon folder. Upload it as an artifact, and create a GitHub Release on `v*` tags. | `agent-ok` |
 | W7 | No dependency or security automation. | Dependabot (`nuget` and `github-actions`), CodeQL for C#, and secret scanning. | `agent-ok` |
 | W8 | No tests. | An xUnit project covering packet parsing and validation (S1/S5), number formatting under `fr-FR` (B1), the client command allowlist (S2) and VConsole framing (B4). Also add a **fake VConsole TCP server**: it speaks protocol 211, records the `CMND` packets it receives and sends scripted `PRNT` lines, so the whole client → server → client path can be tested without the game. | `agent-ok` |
 | W9 | The Workshop addon is deleted, so it has to be installed by hand. | `tools/install-addon.ps1`: find the game through Steam's `libraryfolders.vdf` and copy `WorkshopAddon/game/hlvr_addons/kiwimp_alyx` into `game/hlvr_addons/`. Also add an "Install addon" menu item in the app. | write: `agent-ok`, verify: `needs-game` |
 | W10 | Addon sounds (`.wav`) and the test map (`.vmap`) are uncompiled sources, so players without the Workshop Tools get no sounds and no `mp_kiwitest` map. | Compile them once with the Workshop Tools, and attach the compiled `.vsnd_c` / `.vmap_c` files to releases. | `needs-game` |
-| W11 | Build warnings (nullable, CA2022, NU1701). | Fix them, then turn on `TreatWarningsAsErrors`. | `agent-ok` |
+| W11 | Build warnings (nullable, CA2022, NU1701). | Fix them, raise `AnalysisLevel` to `latest-recommended` (W2) and fix what it adds, then turn on `TreatWarningsAsErrors`. | `agent-ok` |
 | W12 | Unsigned .exe, so Windows SmartScreen will warn. | Optional: sign releases, or document the SmartScreen warning in the README. | — |
 | W13 | Game-side Lua isn't checked by any tool. | Run `luacheck` in CI on `WorkshopAddon/**/*.lua` and `KiwisCoOpMod/base_scripts/**/*.lua`, using the names in `vlua_globals.lua` as allowed globals. It would have caught the B6 copy-paste and precedence bugs. | `agent-ok` |
 | W14 | Project structure. | Move protocol and logic code (packet parsing, validation, number formatting, VConsole framing) into a plain `net10.0` library. Builds and tests then work on any OS, and only the WinForms app stays `-windows`. Alternatively, set `EnableWindowsTargeting=true` to build on Linux runners. | `agent-ok` |
@@ -257,21 +257,26 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 
 ## 8. Suggested order of work
 
+Each phase is a parent issue under #5, with one issue per item. Each phase ends with a two-player in-game test issue (`needs-game`), and every issue of the next phase is blocked by it.
+
 1. **Phase 1, stability** (≈1 day, mostly `agent-ok`)
    - W2–W4, then retarget to .NET 10.
+   - W14-lite: make `KiwisCoOpModCore` a plain `net10.0` library and add an xUnit test project (W8), so B1, B4 and phase 2 have somewhere to put their tests.
    - B1 (number formatting), B2 (thread safety), B3 (UI-thread waits), B4 (VConsole framing), B5 (error logging).
+   - The small B6 fixes: backward outputs, door precedence, text compared to a number, version warning, thread per event, `addon_tools_map`.
    - Switch `addon_enable` to `kiwimp_alyx`, and add W9 (addon installer).
 2. **Phase 2, security** (1–2 days, `agent-ok`)
-   - S1 (packet validation), S2 (client allowlist), S3 (login gate and limits), S4/S5 (usernames), S7 (leftovers).
+   - S1 (packet validation), S2 (client allowlist), S3 (login gate and limits), S4/S5 (usernames), S6 (docs), S7 (leftovers), S8 (port check, `needs-game`).
    - Write the tests from W8 alongside each fix.
 3. **Phase 3, workflow** (≈1 day, `agent-ok`)
-   - W5 (central package versions), W6 (CI), W7 (Dependabot and CodeQL), W11 (warnings), W13 (`luacheck`), W14 (plain `net10.0` library).
-   - Self-contained release builds.
+   - W5 (central package versions), W6 (CI), W7 (Dependabot and CodeQL), W11 (warnings), W13 (`luacheck`), and the rest of W14 (move the remaining protocol and logic code into the plain library).
+   - Self-contained release builds, and `tools/check-game-compat.ps1`.
 4. **Phase 4, larger and optional**
    - Package upgrades (Websocket.Client 5, NLua 1.7, DiscordRichPresence 1.6).
    - Replace Fleck and Open.NAT.
    - Add `wss://` (TLS).
-   - Replace console-text parsing with a structured message format.
-5. **After each phase** (`needs-game`)
+   - Replace console-text parsing with a structured message format, together with B6's English-only join matching.
+   - W10 (compiled addon assets), W12 (SmartScreen).
+5. **The in-game test issue at the end of each phase** (`needs-game`)
    - Two-player in-game test on a campaign map, for example `a3_hotel_lobby_basement`.
    - Run `tools/check-game-compat.ps1`.

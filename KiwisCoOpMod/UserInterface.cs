@@ -152,12 +152,12 @@ namespace KiwisCoOpMod
                 // Automatically select saved addons
                 foreach(ToolStripItem pluginItem in pluginsToolStripMenuItem.DropDownItems)
                 {
-                    if (currentAddons.Contains(pluginItem.Text))
+                    if (currentAddons.Contains(pluginItem.Text ?? string.Empty))
                         SelectAddon(pluginItem, new EventArgs());
                 }
                 foreach (ToolStripItem gamemodeItem in gamemodeToolStripMenuItem.DropDownItems)
                 {
-                    if (currentAddons.Contains(gamemodeItem.Text))
+                    if (currentAddons.Contains(gamemodeItem.Text ?? string.Empty))
                     {
                         SelectAddon(gamemodeItem, new EventArgs());
                         first = false;
@@ -286,8 +286,8 @@ namespace KiwisCoOpMod
                                 foreach (ToolStripMenuItem menuItem in gamemodeToolStripMenuItem.DropDownItems)
                                 {
                                     menuItem.Checked = false;
-                                    if (currentAddons.Contains(menuItem.Text))
-                                        currentAddons.Remove(menuItem.Text);
+                                    if (menuItem.Text is string text && currentAddons.Contains(text))
+                                        currentAddons.Remove(text);
                                 }
                                 gamemodeType = initializer.Type;
                                 item.Checked = true;

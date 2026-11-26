@@ -1,0 +1,19 @@
+﻿<Project>
+
+  <!-- Settings shared by every project in KCOM.sln (UPGRADE_PLAN.md W2). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>14</LangVersion>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Version>3.1.0.0</Version>
+    <Company>KiwifruitDev</Company>
+    <Copyright>© 2022 KiwifruitDev</Copyright>
+  </PropertyGroup>
+
+</Project>

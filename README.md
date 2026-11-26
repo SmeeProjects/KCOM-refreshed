@@ -123,7 +123,7 @@ Feel free to provide scripts to the KCOM community via the [Discord](https://dis
 ## Debugging/Modding
 
 ### Requirements
-- [Visual Studio 2022 or later](https://visualstudio.microsoft.com/downloads/)
+- [Visual Studio 2026 or later](https://visualstudio.microsoft.com/downloads/), or the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (10.0.400 or later, see `global.json`)
 	- Select ".NET desktop development" during installation
 - [7-Zip](https://www.7-zip.org/download.html)
 - [Git](https://git-scm.com/downloads)
