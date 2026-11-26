@@ -7,8 +7,7 @@
   
   <ItemGroup>
     <PackageReference Include="Fleck" Version="1.2.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="System.Drawing.Common" Version="6.0.2-mauipre.1.22054.8" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
 </Project>

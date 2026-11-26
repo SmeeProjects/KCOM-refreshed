@@ -61,12 +61,12 @@ This is a record of how compatibility was checked, so it can be checked again af
 
 | Package | Used | Latest (2026-11) | Action |
 |---|---|---|---|
-| Newtonsoft.Json | 13.0.1 | 13.0.4 | Update. 13.0.1 already contains the fix for CVE-2024-21907. Keep Newtonsoft, because the Lua scripts `import` it by name (`base_scripts/base/__init.lua`). |
+| Newtonsoft.Json | 13.0.1 | 13.0.4 | **Updated** (#7). 13.0.1 already contains the fix for CVE-2024-21907. Keep Newtonsoft, because the Lua scripts `import` it by name (`base_scripts/base/__init.lua`). |
 | Websocket.Client | 4.4.43 | 5.5.1 | Maintained. Major-version jump: read the v5 release notes and adjust `ClientProgram.cs`. |
 | NLua | 1.6.0 | 1.7.9 | Update together with KeraLua. |
 | KeraLua (via NLua) | 1.3.1 | 1.4.11 | Comes with NLua. The copy steps no longer hard-code its version (W3). |
-| DiscordRichPresence | 1.0.175 | 1.6.1.70 | Update. Expect small API changes in `DiscordRpcPlugin.cs`. Its csproj copy path also hard-codes the version and `net35`. |
-| System.Drawing.Common | 6.0.2-mauipre (a preview build) | 10.0.x | Use 10.0.x, or remove it, since `Color` is part of the base framework. |
+| DiscordRichPresence | 1.0.175 | 1.6.1.70 | Update. Expect small API changes in `DiscordRpcPlugin.cs`. The copy step no longer hard-codes its version or `net35` (W3). |
+| System.Drawing.Common | 6.0.2-mauipre (a preview build) | 10.0.x | **Removed** (#7): `Color` is part of the base framework. |
 | **Fleck** (WebSocket server) | 1.2.0 | 1.2.0 (2021-04) | **Unmaintained.** It has no known security advisories, but no message-size limits or TLS support. Medium-term, replace it with ASP.NET Core (Kestrel) WebSockets. |
 | **Open.NAT** (UPnP) | 2.1.0 | 2.1.0 (2016-07) | **Unmaintained**, and built only for .NET Framework, which causes build warning NU1701. Replace it with a maintained UPnP/NAT-PMP library, or drop UPnP and document manual port forwarding. |
 
@@ -257,21 +257,26 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 
 ## 8. Suggested order of work
 
+Each phase is a parent issue under #5, with one issue per item. Each phase ends with a two-player in-game test issue (`needs-game`), and every issue of the next phase is blocked by it.
+
 1. **Phase 1, stability** (≈1 day, mostly `agent-ok`)
    - W2–W4, then retarget to .NET 10.
+   - W14-lite: make `KiwisCoOpModCore` a plain `net10.0` library and add an xUnit test project (W8), so B1, B4 and phase 2 have somewhere to put their tests.
    - B1 (number formatting), B2 (thread safety), B3 (UI-thread waits), B4 (VConsole framing), B5 (error logging).
+   - The small B6 fixes: backward outputs, door precedence, text compared to a number, version warning, thread per event, `addon_tools_map`.
    - Switch `addon_enable` to `kiwimp_alyx`, and add W9 (addon installer).
 2. **Phase 2, security** (1–2 days, `agent-ok`)
-   - S1 (packet validation), S2 (client allowlist), S3 (login gate and limits), S4/S5 (usernames), S7 (leftovers).
+   - S1 (packet validation), S2 (client allowlist), S3 (login gate and limits), S4/S5 (usernames), S6 (docs), S7 (leftovers), S8 (port check, `needs-game`).
    - Write the tests from W8 alongside each fix.
 3. **Phase 3, workflow** (≈1 day, `agent-ok`)
-   - W5 (central package versions), W6 (CI), W7 (Dependabot and CodeQL), W11 (warnings), W13 (`luacheck`), W14 (plain `net10.0` library).
-   - Self-contained release builds.
+   - W5 (central package versions), W6 (CI), W7 (Dependabot and CodeQL), W11 (warnings), W13 (`luacheck`), and the rest of W14 (move the remaining protocol and logic code into the plain library).
+   - Self-contained release builds, and `tools/check-game-compat.ps1`.
 4. **Phase 4, larger and optional**
    - Package upgrades (Websocket.Client 5, NLua 1.7, DiscordRichPresence 1.6).
    - Replace Fleck and Open.NAT.
    - Add `wss://` (TLS).
-   - Replace console-text parsing with a structured message format.
-5. **After each phase** (`needs-game`)
+   - Replace console-text parsing with a structured message format, together with B6's English-only join matching.
+   - W10 (compiled addon assets), W12 (SmartScreen).
+5. **The in-game test issue at the end of each phase** (`needs-game`)
    - Two-player in-game test on a campaign map, for example `a3_hotel_lobby_basement`.
    - Run `tools/check-game-compat.ps1`.
