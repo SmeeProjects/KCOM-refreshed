@@ -31,6 +31,8 @@ namespace KiwisCoOpMod
     {
         public ClientProgram clientProgram;
         private bool started = false;
+        // Changes on every Start and Stop, so a start that finishes late doesn't touch a newer session.
+        private int startGeneration = 0;
         private DateTime startTime;
         private readonly Channel channel = new("KCOM", "Kiwi's Co-Op Mod", Color.Purple);
         private readonly Random random = new();
@@ -247,17 +249,35 @@ namespace KiwisCoOpMod
                 SetStatus(Color.Green, "Active");
                 startTime = DateTime.Now;
                 LogToOutput(channel, "Starting at " + startTime.ToString(@"hh\:mm\:ss"));
-                if (checkBoxServerEnabled.Checked)
-                    ServerProgram.instance.Start(gamemodeType, plugins);
-                if (checkBoxClientEnabled.Checked)
+                int generation = ++startGeneration;
+                bool startClient = checkBoxClientEnabled.Checked;
+                void FinishStart()
                 {
-                    clientProgram.Start(plugins);
+                    if (!started || generation != startGeneration)
+                        return;
+                    if (startClient)
+                    {
+                        clientProgram.Start(plugins);
+                    }
+                    PluginHandler.Handle(plugins, PluginHandleType.UserInterface_PostStart, this);
+                    LuaEnvironment.instance.Handle(PluginHandleType.UserInterface_PostStart, this);
                 }
-                PluginHandler.Handle(plugins, PluginHandleType.UserInterface_PostStart, this);
-                LuaEnvironment.instance.Handle(PluginHandleType.UserInterface_PostStart, this);
+                if (checkBoxServerEnabled.Checked)
+                {
+                    // The server starts on its own thread, and its start handlers Invoke this one: start the
+                    // client (a listen server's connects to it) only once it is listening, without waiting here (UPGRADE_PLAN.md B2).
+                    ServerProgram.instance.Start(gamemodeType, plugins).ContinueWith(_ =>
+                    {
+                        if (!IsDisposed)
+                            BeginInvoke(FinishStart);
+                    }, TaskScheduler.Default);
+                }
+                else
+                    FinishStart();
             }
             else
             {
+                startGeneration++;
                 PluginHandler.Handle(plugins, PluginHandleType.UserInterface_PreClose, this);
                 LuaEnvironment.instance.Handle(PluginHandleType.UserInterface_PreClose, this);
                 buttonStart.Text = "Start";
@@ -528,6 +548,53 @@ namespace KiwisCoOpMod
         private void UPnPToolStripMenuItem_Click(object sender, EventArgs e)
         {
             AskUPnP(false);
+        }
+
+        // Copies the addon shipped next to KiwisCoOpMod.exe into the game (UPGRADE_PLAN.md W9).
+        private void InstallAddonToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string source = Path.Combine(AppContext.BaseDirectory, "addon", AddonInstaller.AddonName);
+            string? game;
+            try
+            {
+                game = AddonInstaller.FindGameDirectory(GetSteamDirectories());
+            }
+            catch (Exception ex)
+            {
+                // An unreadable libraryfolders.vdf or manifest: let the player pick the folder instead.
+                Log.Warning("Addon", "Failed to search the Steam libraries for Half-Life: Alyx", ex);
+                game = null;
+            }
+            if (game == null)
+            {
+                using FolderBrowserDialog dialog = new()
+                {
+                    Description = "Half-Life: Alyx wasn't found in your Steam libraries. Select its folder (the one holding 'game'), for example 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Half-Life Alyx'.",
+                    UseDescriptionForTitle = true
+                };
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+                game = dialog.SelectedPath;
+            }
+            try
+            {
+                string target = AddonInstaller.Install(source, game);
+                MessageBox.Show(this, "Installed the KCOM addon to:\n\n" + target + "\n\nRestart Half-Life: Alyx if it is running.", "Install Addon", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Addon", ex, "Failed to install the addon into " + game, notify: false);
+                MessageBox.Show(this, "The addon couldn't be installed:\n\n" + ex.Message, "Install Addon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private static IEnumerable<string> GetSteamDirectories()
+        {
+            if (Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null) is string userPath)
+                yield return userPath.Replace('/', '\\');
+            if (Microsoft.Win32.Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam", "InstallPath", null) is string machinePath)
+                yield return machinePath;
+            yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam");
         }
 
         private static async void AskUPnP(bool firstTime)

@@ -32,7 +32,8 @@ namespace KiwisCoOpMod
         private TcpClient? client;
         private NetworkStream? stream;
         private bool killed = false;
-        private List<byte[]> commandQueue = new();
+        // Filled from the websocket thread while VConsole is down and emptied by Connect: guarded by its own lock (UPGRADE_PLAN.md B2).
+        private readonly List<byte[]> commandQueue = new();
         private StreamWatcher? watcher;
         public VConsole()
         {
@@ -77,11 +78,14 @@ namespace KiwisCoOpMod
             WriteWindowFocus(true);
             if (stream != null)
             {
-                foreach (byte[] command in commandQueue)
+                lock (commandQueue)
                 {
-                    stream.Write(command);
+                    foreach (byte[] command in commandQueue)
+                    {
+                        stream.Write(command);
+                    }
+                    commandQueue.Clear();
                 }
-                commandQueue.Clear();
             }
             return true;
         }
@@ -177,7 +181,8 @@ namespace KiwisCoOpMod
                 if (!killed)
                     stream.Write(completeData);
                 else
-                    commandQueue.Add(completeData);
+                    lock (commandQueue)
+                        commandQueue.Add(completeData);
             }
         }
         public void WriteCommand(string command, bool urgent = false)
@@ -189,7 +194,8 @@ namespace KiwisCoOpMod
                 if (!killed)
                     stream.Write(completeData);
                 else if (urgent)
-                    commandQueue.Add(completeData);
+                    lock (commandQueue)
+                        commandQueue.Add(completeData);
             }
         }
     }

@@ -36,9 +36,29 @@ needs another tool, add it to the Dockerfile. `global.json` (W2) must use
   permissions (W6's release job, W7's CodeQL) always is. Then put the workflow in the
   pull request description for the maintainer to add, and do the rest in the pull request.
   CodeQL's default setup is turned on in the repository's settings, not with a file.
-- `needs-game` work: add a short manual test checklist (two players, a campaign map such as
-  `a3_hotel_lobby_basement`) for the maintainer to run before merging.
 - Never commit Valve game files or binaries, even partly (plan §7).
+
+## In-game checks
+
+Every in-game check needs two players, so they are all run together in the current phase's
+exit issue (#17, #25, #32, #58), never one change at a time (plan §7).
+`needs-game` still means "needs a PC with the game"; only the timing of the tests changes.
+
+- In a pull request, never ask for an in-game test before merging. Put the checks it needs
+  under an `## In-game checks (phase exit)` heading in its description, as a checklist (two
+  players, a campaign map such as `a3_hotel_lobby_basement`). The pull request can be merged
+  without them, and the acceptance criteria they cover count as met by the code.
+- Never file an issue just for a manual or in-game test, and never make one a blocker: such a
+  test belongs to the current phase's exit issue. Work that needs the game (S8's port check,
+  W10's asset compiling) stays a `needs-game` issue of its own.
+- When filing or grooming an issue, put its in-game checks under an "In-game checks (phase
+  exit)" heading rather than in its acceptance criteria, so the issue can close once its
+  code is merged.
+- A run on a phase's exit issue, once every other issue of the phase is closed, gathers the
+  "In-game checks (phase exit)" sections of the phase's merged pull requests (and of its
+  closed issues) into one checklist in the exit issue's body, grouped by pull request and
+  linking each one, with `tools/check-game-compat.ps1` as the last step. It edits only the
+  exit issue's body: the maintainer runs the checklist in one two-player session and ticks it.
 
 ## Code style
 

@@ -22,6 +22,7 @@
 	<ItemGroup>
     <BaseLuaScripts Include="$(ProjectDir)base_scripts\**\*.*" />
 	<BaseCheckpoints Include="$(ProjectDir)base_checkpoints\**\*.*" />
+	<GameAddon Include="$(ProjectDir)..\WorkshopAddon\game\hlvr_addons\kiwimp_alyx\**\*.*" />
  	</ItemGroup>
 	<Target Name="CopyDLLs" AfterTargets="Build">
 		<MakeDir Directories="$(ProjectDir)bin\$(Configuration)\scripts" />
@@ -29,6 +30,11 @@
 
 		<MakeDir Directories="$(ProjectDir)bin\$(Configuration)\checkpoints" />
 		<Copy SourceFiles="@(BaseCheckpoints)" DestinationFiles="$(ProjectDir)bin\$(Configuration)\checkpoints\%(RecursiveDir)%(Filename)%(Extension)" />
+
+		<!-- The game addon, for File > Install Addon and install-addon.ps1 (W9). -->
+		<RemoveDir Directories="$(ProjectDir)bin\$(Configuration)\addon" />
+		<Copy SourceFiles="@(GameAddon)" DestinationFiles="$(ProjectDir)bin\$(Configuration)\addon\kiwimp_alyx\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Copy SourceFiles="$(ProjectDir)..\tools\install-addon.ps1" DestinationFolder="$(ProjectDir)bin\$(Configuration)" />
 
 		<!-- NLua, KeraLua and Lua's native DLL as NuGet resolved them, whatever their versions (W3). -->
 		<Copy SourceFiles="@(RuntimeCopyLocalItems)" Condition="('%(NuGetPackageId)' == 'NLua' Or '%(NuGetPackageId)' == 'KeraLua') And '%(Extension)' == '.dll'" DestinationFolder="$(ProjectDir)bin\$(Configuration)\libraries" />

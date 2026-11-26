@@ -36,6 +36,7 @@ namespace KiwisCoOpMod
             this.menuStrip = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.uPnPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.installAddonToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveOptionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.closeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -134,6 +135,7 @@ namespace KiwisCoOpMod
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.uPnPToolStripMenuItem,
+            this.installAddonToolStripMenuItem,
             this.saveOptionsToolStripMenuItem,
             this.closeToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -146,6 +148,13 @@ namespace KiwisCoOpMod
             this.uPnPToolStripMenuItem.Size = new System.Drawing.Size(192, 22);
             this.uPnPToolStripMenuItem.Text = "Forward Port via UPnP";
             this.uPnPToolStripMenuItem.Click += new System.EventHandler(this.UPnPToolStripMenuItem_Click);
+            // 
+            // installAddonToolStripMenuItem
+            // 
+            this.installAddonToolStripMenuItem.Name = "installAddonToolStripMenuItem";
+            this.installAddonToolStripMenuItem.Size = new System.Drawing.Size(192, 22);
+            this.installAddonToolStripMenuItem.Text = "Install Addon";
+            this.installAddonToolStripMenuItem.Click += new System.EventHandler(this.InstallAddonToolStripMenuItem_Click);
             // 
             // saveOptionsToolStripMenuItem
             // 
@@ -740,6 +749,7 @@ namespace KiwisCoOpMod
         private ToolStripMenuItem pluginsToolStripMenuItem;
         private ToolStripStatusLabel toolStripStatusLabelLibraries;
         private ToolStripMenuItem uPnPToolStripMenuItem;
+        private ToolStripMenuItem installAddonToolStripMenuItem;
         private TabControl tabControlBottom;
         private TabPage tabPageOutput;
         private TabPage tabPageServer;
