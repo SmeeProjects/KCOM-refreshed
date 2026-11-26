@@ -1,4 +1,4 @@
-/*
+﻿/*
     Kiwi's Co-Op Mod for Half-Life: Alyx
     Copyright (c) 2022 KiwifruitDev
     All rights reserved.
@@ -38,8 +38,13 @@ namespace KiwisCoOpMod
         private readonly List<AddonInitializer> addons = new();
         private readonly List<Type> plugins = new();
         List<string>? currentAddons;
+        private readonly Channel errorChannel = new("ERROR", "Errors", Color.Red);
+        private readonly Channel warningChannel = new("WARNING", "Errors", Color.DarkOrange);
+        private readonly List<LogEntry> pendingLogEntries = new();
         public UserInterface()
         {
+            Log.Logged += ShowLogEntry;
+            HandleCreated += (sender, e) => ShowPendingLogEntries();
             AutoScaleMode = AutoScaleMode.None;
             Font = new Font(Font.Name, 8.25f * 96f / CreateGraphics().DpiX, Font.Style, Font.Unit, Font.GdiCharSet, Font.GdiVerticalFont);
             InitializeComponent();
@@ -319,6 +324,28 @@ namespace KiwisCoOpMod
                     }
                 }
             }
+        }
+
+        // Log.Logged fires on any thread: entries wait in pendingLogEntries until the window exists,
+        // then go through the UI thread without blocking the caller (UPGRADE_PLAN.md B5).
+        private void ShowLogEntry(LogEntry entry)
+        {
+            lock (pendingLogEntries)
+                pendingLogEntries.Add(entry);
+            if (IsHandleCreated && !IsDisposed)
+                BeginInvoke(ShowPendingLogEntries);
+        }
+
+        private void ShowPendingLogEntries()
+        {
+            List<LogEntry> entries;
+            lock (pendingLogEntries)
+            {
+                entries = new(pendingLogEntries);
+                pendingLogEntries.Clear();
+            }
+            foreach (LogEntry entry in entries)
+                LogToOutput(entry.Level == LogLevel.Error ? errorChannel : warningChannel, entry.Summary);
         }
 
         public void LogToOutputGeneric(params object[] text)
