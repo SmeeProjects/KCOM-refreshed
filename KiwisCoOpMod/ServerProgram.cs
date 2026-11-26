@@ -119,7 +119,7 @@ namespace KiwisCoOpMod
         public void ChangeMap(string map)
         {
             Map.map = map;
-            Response output2 = new("command", "addon_play "+map+"; addon_tools_map "+map);
+            Response output2 = new("command", "addon_play " + map);
             foreach (IndexedClient con in connections)
             {
                 con.Session.Send(JsonConvert.SerializeObject(output2));

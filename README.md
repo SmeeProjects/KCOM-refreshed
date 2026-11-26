@@ -6,8 +6,6 @@
 
 [![Downloads](https://img.shields.io/github/downloads/teampopplio/kcom/total)](https://github.com/teampopplio/kcom/releases)
 
-[![Workshop Subscribers](https://img.shields.io/steam/subscriptions/2739356543?label=workshop%20subscribers)](https://steamcommunity.com/sharedfiles/filedetails/?id=2739356543)
-
 [![Discord](https://img.shields.io/discord/738131767944282183?label=discord)](https://discord.gg/3X3teNecWs)
 
 [![License](https://img.shields.io/badge/license-mit-green.svg)](https://github.com/TeamPopplio/KCOM/blob/main/LICENSE.md)
@@ -32,7 +30,7 @@
 
 ## Installation
 
-- Subscribe to the [Workshop Addon](https://steamcommunity.com/sharedfiles/filedetails/?id=2739356543) on Steam
+- Copy the [game addon](WorkshopAddon/game/hlvr_addons/kiwimp_alyx) folder `WorkshopAddon/game/hlvr_addons/kiwimp_alyx` from this repository into Half-Life: Alyx's `game/hlvr_addons` folder (create `hlvr_addons` if it doesn't exist). The Steam Workshop item has been removed, so the addon is installed by hand.
 - Download the [latest release](https://github.com/TeamPopplio/KCOM/releases) from GitHub
 - Extract the contents of the zip file to a safe place (e.g. a new folder on your desktop)
 - Set the following launch options for Half-Life: Alyx in Steam: `-console -vconsole -language english`

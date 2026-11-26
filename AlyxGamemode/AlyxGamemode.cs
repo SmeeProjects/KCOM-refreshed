@@ -48,7 +48,7 @@ namespace AlyxGamemode
                             List<IndexedClient> openConnections = (List<IndexedClient>)vs[0];
                             IWebSocketConnection openSocket = (IWebSocketConnection)vs[1];
                             Player? player2 = AlyxGlobalData.instance.GetPlayer(openSocket.ConnectionInfo.Id);
-                            Response enableAddon = new("command", "addon_enable 2739356543");
+                            Response enableAddon = new("command", "addon_enable kiwimp_alyx");
                             openSocket.Send(JsonConvert.SerializeObject(enableAddon));
                         }
                         break;
@@ -275,7 +275,7 @@ namespace AlyxGamemode
                                                             /*
                                                             if (packet.args[0] != player.Client.Map)
                                                             {
-                                                                Response mapOutput = new("command", "addon_play " + packet.args[0] + "; addon_tools_map " + packet.args[0]);
+                                                                Response mapOutput = new("command", "addon_play " + packet.args[0]);
                                                                 foreach (IndexedClient broadcast in connections)
                                                                 {
                                                                     Player? keyValuePair = AlyxGlobalData.instance.GetPlayer(broadcast.Session.ConnectionInfo.Id);
