@@ -180,6 +180,8 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 
 **Fix:** use `CultureInfo.InvariantCulture` in every `ToString`/`Parse`. As a one-line stopgap, set `CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture` in `Program.Main`. Add unit tests that run under `fr-FR`.
 
+**Done** (#10): `KiwisCoOpModCore/GameNumber.cs` formats and parses with the invariant culture, and `Vector`, `Angle` and every `float.Parse`/`int.Parse` of game data in `AlyxGamemode.cs` use it. The other parses already passed `InvariantCulture.NumberFormat`, but with the default `NumberStyles`, which allows thousands separators and reads `12,5` as `125`: `GameNumber` uses `NumberStyles.Float`. `Program.Main` sets the invariant culture as the backstop. Tests run under `fr-FR` (`KiwisCoOpModCore.Tests/GameNumberTests.cs`). The in-game check (host on `fr-FR`) is still open.
+
 ### B2. High: shared lists aren't thread-safe (`agent-ok`)
 
 `ServerProgram.connections` (a `List<T>`) and `AlyxGlobalData`'s player and entity lists are read and changed at the same time from Fleck's socket threads, the tick loop and the UI thread. That causes intermittent "Collection was modified" errors and lost players, all hidden by `catch {}`.

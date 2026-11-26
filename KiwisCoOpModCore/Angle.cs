@@ -34,7 +34,7 @@ namespace KiwisCoOpModCore
         }
         public override string ToString()
         {
-            return Pitch + " " + Yaw + " " + Roll;
+            return GameNumber.Format(Pitch) + " " + GameNumber.Format(Yaw) + " " + GameNumber.Format(Roll);
         }
     }
 }
