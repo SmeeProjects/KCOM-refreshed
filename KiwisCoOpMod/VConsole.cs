@@ -59,10 +59,19 @@ namespace KiwisCoOpMod
             }
             if (!listening)
                 return false;
-            client = new TcpClient("127.0.0.1", Settings.Default.VconsolePort);
+            try
+            {
+                client = new TcpClient("127.0.0.1", Settings.Default.VconsolePort);
+            }
+            catch (SocketException)
+            {
+                // The game closed the port since the check above (e.g. while reconnecting).
+                return false;
+            }
             stream = client.GetStream();
             watcher = new StreamWatcher(stream);
             watcher.MessageAvailable += MessageAvailable;
+            watcher.Faulted += Faulted;
             if (watcher != null)
                 watcher.SetWorking(true);
             killed = false;
@@ -89,8 +98,7 @@ namespace KiwisCoOpMod
                 switch (command)
                 {
                     case "PRNT":
-                        byte[] message = e.Data.Skip(30).SkipLast(1).ToArray();
-                        string newMessage = Encoding.ASCII.GetString(message).Replace("\n", "");
+                        string newMessage = VConsoleFraming.DecodePrint(e.Data).Replace("\n", "");
                         if(newMessage != "" && !newMessage.Contains("Command buffer full"))
                         {
                             /*
@@ -115,6 +123,19 @@ namespace KiwisCoOpMod
                 }
             }
         }
+
+        private void Faulted(object sender, Exception e)
+        {
+            // Only the current connection's watcher matters, and not once Disconnect() ran.
+            if (sender != watcher || killed)
+                return;
+            Disconnect();
+            ConnectionLost?.Invoke(e);
+        }
+
+        // Raised when the game closed VConsole or the stream got out of sync (B4).
+        // The connection is already closed: call Connect() again to reconnect.
+        public event Action<Exception>? ConnectionLost;
 
         /*
         public void Reconnect()
@@ -156,26 +177,7 @@ namespace KiwisCoOpMod
         {
             if (stream != null)
             {
-                byte[] vcmd = Encoding.ASCII.GetBytes("VFCS").Reverse().ToArray();
-                byte protocol = Convert.ToByte(Settings.Default.VconsoleProtocol);
-                byte dataLength = Convert.ToByte(13);
-                List<byte> dataList = new()
-                {
-                    0,
-                    protocol,
-                    0,
-                    0,
-                    0,
-                    dataLength,
-                    0,
-                    0,
-                    (byte)(focused == true ? 1 : 0)
-                };
-                foreach (byte cmdByte in vcmd)
-                {
-                    dataList = dataList.Prepend(cmdByte).ToList();
-                }
-                byte[] completeData = dataList.ToArray();
+                byte[] completeData = VConsoleFraming.EncodeWindowFocus(focused, Settings.Default.VconsoleProtocol);
                 if (!killed)
                     stream.Write(completeData);
                 else
@@ -185,26 +187,10 @@ namespace KiwisCoOpMod
         }
         public void WriteCommand(string command, bool urgent = false)
         {
-            if (stream != null)
+            // Longer commands don't fit in a packet's 16-bit length (B4).
+            if (stream != null && command.Length <= VConsoleFraming.MaxCommandLength)
             {
-                byte[] vcmd = Encoding.ASCII.GetBytes("CMND").Reverse().ToArray();
-                byte[] data = Encoding.ASCII.GetBytes(command);
-                byte dataLength = Convert.ToByte(data.Length + 13);
-                byte protocol = Convert.ToByte(Settings.Default.VconsoleProtocol);
-                List<byte> dataList = new()
-                {
-                    0, protocol, 0, 0, 0, dataLength, 0, 0
-                };
-                foreach (byte cmdByte in vcmd)
-                {
-                    dataList = dataList.Prepend(cmdByte).ToList();
-                }
-                foreach (byte cmdByte in data)
-                {
-                    dataList = dataList.Append(cmdByte).ToList();
-                }
-                dataList.Add(0x00);
-                byte[] completeData = dataList.ToArray();
+                byte[] completeData = VConsoleFraming.EncodeCommand(command, Settings.Default.VconsoleProtocol);
                 if (!killed)
                     stream.Write(completeData);
                 else if (urgent)

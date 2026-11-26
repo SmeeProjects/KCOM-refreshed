@@ -42,6 +42,15 @@ namespace KiwisCoOpMod
         public ClientProgram(UserInterface ui)
         {
             this.ui = ui;
+            if (vConsole != null)
+                vConsole.ConnectionLost += VConsoleConnectionLost;
+        }
+
+        private void VConsoleConnectionLost(Exception e)
+        {
+            ui.BeginInvoke(() => ui.LogToOutput(channel, "Lost VConsole connection: " + e.Message));
+            if (ws != null)
+                ConnectVConsole(ws);
         }
 
         public void ConnectVConsole(WebsocketClient ws)

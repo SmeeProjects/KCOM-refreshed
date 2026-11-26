@@ -9,6 +9,8 @@ using Xunit;
 namespace KiwisCoOpModCore.Tests
 {
     // Log is static, so every test of it lives in this class: xUnit runs one class's tests one at a time (UPGRADE_PLAN.md B5).
+    // Other classes whose code logs join the "Log" collection, so they never run alongside it.
+    [Collection("Log")]
     public sealed class LogTests : IDisposable
     {
         private readonly string directory = Path.Combine(Path.GetTempPath(), "kcom-log-tests-" + Guid.NewGuid().ToString("N"));
