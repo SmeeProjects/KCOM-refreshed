@@ -231,13 +231,8 @@ namespace AlyxGamemode
                                                             socket.Send(JsonConvert.SerializeObject(vconsoleInput2));
                                                             break;
                                                         case PacketType.InitializedEntities:
-                                                            _ = Task.Delay(2500).ContinueWith(_ =>
-                                                            {
-                                                                Response vconsoleInput5 = new("command", "buddha 1;unpause;ent_fire kcom_timer addoutput OnTimer>kcom_script>CallScriptFunction>KiwisCoOpMod>0>-1");
-                                                                Response output4 = new("status", "Co-op initialized!");
-                                                                socket.Send(JsonConvert.SerializeObject(output4));
-                                                                socket.Send(JsonConvert.SerializeObject(vconsoleInput5));
-                                                            }, TaskScheduler.Default);
+                                                            player.SyncStarted = false;
+                                                            StartSyncLoop(player, socket, 1);
                                                             break;
                                                         case PacketType.RightHandIndexes:
                                                         case PacketType.LeftHandIndexes:
@@ -295,6 +290,7 @@ namespace AlyxGamemode
                                                                 socket.Send(JsonConvert.SerializeObject(versionOutput));
                                                             }
                                                             Map.map = packet.args[0];
+                                                            player.SyncStarted = true;
                                                             break;
                                                         case PacketType.ButtonIndexStartPos:
                                                         case PacketType.ButtonPressIndex:
@@ -399,6 +395,36 @@ namespace AlyxGamemode
             {
                 Log.Error("AlyxGamemode", e, "Failed to handle " + type);
             }
+        }
+        // How many times the start command is sent before giving up, the wait before the first one,
+        // and how long to wait for MAPN before sending it again.
+        private const int SyncStartAttempts = 5;
+        private const int SyncStartDelayMs = 2500;
+        private const int SyncRetryDelayMs = 5000;
+        // Tells the game to start KiwisCoOpMod() after a delay, then sends it again until its MAPN line
+        // arrives: the game can drop a command (e.g. "Command buffer full"), which left a client without sync.
+        // The delayed work runs on WorkQueue.Server like the rest of the gamemode (UPGRADE_PLAN.md B2).
+        private static void StartSyncLoop(Player player, IWebSocketConnection socket, int attempt)
+        {
+            _ = Task.Delay(attempt == 1 ? SyncStartDelayMs : SyncRetryDelayMs).ContinueWith(_ => WorkQueue.Server.Post(() =>
+            {
+                // Gone, rejoined as another player, or already running.
+                if (!socket.IsAvailable || AlyxGlobalData.instance.GetPlayer(socket.ConnectionInfo.Id) != player || player.SyncStarted)
+                    return;
+                if (attempt > SyncStartAttempts)
+                {
+                    Log.Warning("AlyxGamemode", player.Client.Username + "'s game didn't start syncing after " + SyncStartAttempts + " attempts.");
+                    return;
+                }
+                Response vconsoleInput5 = new("command", "buddha 1;unpause;ent_fire kcom_timer addoutput OnTimer>kcom_script>CallScriptFunction>KiwisCoOpMod>0>-1");
+                if (attempt == 1)
+                {
+                    Response output4 = new("status", "Co-op initialized!");
+                    socket.Send(JsonConvert.SerializeObject(output4));
+                }
+                socket.Send(JsonConvert.SerializeObject(vconsoleInput5));
+                StartSyncLoop(player, socket, attempt + 1);
+            }), TaskScheduler.Default);
         }
     }
 }

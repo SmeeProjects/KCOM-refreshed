@@ -180,7 +180,7 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 
 **Fix:** use `CultureInfo.InvariantCulture` in every `ToString`/`Parse`. As a one-line stopgap, set `CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture` in `Program.Main`. Add unit tests that run under `fr-FR`.
 
-**Done** (#10): `KiwisCoOpModCore/GameNumber.cs` formats and parses with the invariant culture, and `Vector`, `Angle` and every `float.Parse`/`int.Parse` of game data in `AlyxGamemode.cs` use it. The other parses already passed `InvariantCulture.NumberFormat`, but with the default `NumberStyles`, which allows thousands separators and reads `12,5` as `125`: `GameNumber` uses `NumberStyles.Float`. `Program.Main` sets the invariant culture as the backstop. Tests run under `fr-FR` (`KiwisCoOpModCore.Tests/GameNumberTests.cs`). The in-game check (host on `fr-FR`) is in phase 1's exit issue (#17).
+**Done** (#10): `KiwisCoOpModCore/GameNumber.cs` formats and parses with the invariant culture, and `Vector`, `Angle` and every `float.Parse`/`int.Parse` of game data in `AlyxGamemode.cs` use it. The other parses already passed `InvariantCulture.NumberFormat`, but with the default `NumberStyles`, which allows thousands separators and reads `12,5` as `125`: `GameNumber` uses `NumberStyles.Float`. `Program.Main` sets the invariant culture as the backstop. Tests run under `fr-FR` (`KiwisCoOpModCore.Tests/GameNumberTests.cs`). Checked in game in phase 1's first session (#17): with the host on `fr-FR`, heads, name text, hands, teleports, moved props and `kcom_hud` all land right.
 
 ### B2. High: shared lists aren't thread-safe (`agent-ok`)
 
@@ -229,6 +229,15 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 - **English-only message matching** (`agent-ok` to write, `needs-game` to verify). The join check matches the English console text "has joined the game" (`AlyxGamemode.cs:79`), which is why `-language english` is required (upstream issue #1). Send a KCOM packet from the addon's Lua script instead.
 - **Map change prints an error** (`agent-ok`). `ServerProgram.ChangeMap` and `ClientProgram` send `addon_tools_map` alongside `addon_play`. Outside tools mode it only prints an error, so drop it or send it only when the game is in tools mode.
 
+### B7–B10. Found in phase 1's in-game session (#17)
+
+Phase 1's first two-player session (#17) found these. Each is fixed in #62, phase 1's exit pull request, and the session after it checks them.
+
+- **B7. High: the client can miss its map change** (`agent-ok`). `ClientProgram.Start` started the websocket before connecting VConsole, so the server's `authenticated` reply (with its `addon_play`) could arrive while VConsole was still connecting. `VConsole.WriteCommand` dropped it, so the game never loaded the map or printed "has joined the game", and the player was never registered. A listen server's own client hit this every time. **Fix:** connect VConsole first, and send `addon_play` as urgent: `WriteCommand` now queues urgent commands while VConsole isn't connected, and `Connect` sends them.
+- **B8. High: a game's sync loop may never start** (`agent-ok`). After `IENT`, the server sent the command that starts `KiwisCoOpMod()` once, 2.5 s later, from a thread-pool task outside `WorkQueue.Server` (B2). If the game lost it (it drops commands when "Command buffer full"), that player never synced, and every relayed command failed with "Unknown command". **Fix:** the delayed send runs on `WorkQueue.Server` and is sent again every 5 s until the game's `MAPN` line arrives, 5 times at most, then logs a warning.
+- **B9. Medium: `refresh_all()` wiped the Lua scripts' data** (`agent-ok`). `base/__init.lua` reset `lua_env`, but the per-player tables are only created on join, so `basic.lua` threw on every `PLYR`/`HEAD` packet until the server restarted. **Fix:** `__init.lua` keeps `lua_env`, its `persistence` and `handlers` when they already exist.
+- **B10. Medium: entity names with spaces broke their packets** (`agent-ok`). The addon's entity UUIDs (`class+name+x+y+z`) kept spaces from the map's entity names, so `PHYS` (and `FIRE`, `NPHP`, `BRAK`, `EREM`) split the name into several arguments, and `GameNumber.ParseFloat` threw on them. **Fix:** `uuid()` in `kcom_interval.lua` replaces spaces, `;` and `"` in the name with `_`. Both games compute the same UUID, so the `KCOM_ENTCACHE` keys still match. The same session also showed `KCOM_PickupSync` indexing a nil hand; it now returns when there's none. The `util/player.lua` errors (`Player` is nil when picking things up) come from the bundled `hla_extravaganza` library and are left for later.
+
 ---
 
 ## 6. Build, release and workflow
@@ -275,6 +284,7 @@ Each phase is a parent issue under #5, with one issue per item. Each phase ends 
    - B1 (number formatting), B2 (thread safety), B3 (UI-thread waits), B4 (VConsole framing), B5 (error logging).
    - The small B6 fixes: backward outputs, door precedence, text compared to a number, version warning, thread per event, `addon_tools_map`.
    - Switch `addon_enable` to `kiwimp_alyx`, and add W9 (addon installer).
+   - B7–B10, found in the phase's first in-game session (#17).
 2. **Phase 2, security** (1–2 days, `agent-ok`)
    - S1 (packet validation), S2 (client allowlist), S3 (login gate and limits), S4/S5 (usernames), S6 (docs), S7 (leftovers), S8 (port check, `needs-game`).
    - Write the tests from W8 alongside each fix.
@@ -288,5 +298,5 @@ Each phase is a parent issue under #5, with one issue per item. Each phase ends 
    - Replace console-text parsing with a structured message format, together with B6's English-only join matching.
    - W10 (compiled addon assets), W12 (SmartScreen).
 5. **The in-game test issue at the end of each phase** (`needs-game`)
-   - Once every other issue of the phase is closed, a run on the exit issue gathers the "In-game checks (phase exit)" sections of the phase's merged pull requests into one checklist in the exit issue (no copying by hand).
-   - The maintainer runs that whole checklist in one two-player session on a campaign map, for example `a3_hotel_lobby_basement`, together with `tools/check-game-compat.ps1`, then closes the issue.
+   - Once every other issue of the phase is closed, a run on the exit issue gathers the "In-game checks (phase exit)" sections of the phase's merged pull requests into one checklist in the exit issue (no copying by hand). Phase 1's pull requests from before #56 used "Manual test" or "Manual check" headings; #17 gathered those too.
+   - The maintainer runs that whole checklist in one two-player session on a campaign map, for example `a3_hotel_lobby_basement`, together with `tools/check-game-compat.ps1` once phase 3 has added it (phases 1 and 2 run without it), then closes the issue.
