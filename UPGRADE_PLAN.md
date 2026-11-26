@@ -203,7 +203,7 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 - Reconnect when the stream gets out of sync.
 - Cover it with tests against the fake VConsole server (W8).
 
-**Done** (#11): `KiwisCoOpModCore/VConsoleFraming.cs` encodes and reads protocol 211 packets (12-byte header, 16-bit big-endian length; commands over 65,522 bytes are dropped rather than sent). `StreamWatcher` moved to `KiwisCoOpModCore`: it stops and raises `Faulted` when the stream ends or its header makes no sense, instead of spinning in a `catch { }`. `VConsole` then closes the connection and raises `ConnectionLost`, and `ClientProgram` reconnects through `ConnectVConsole`. Tests in `KiwisCoOpModCore.Tests` cover long commands, split and merged reads, and desyncs, against `FakeVConsoleServer`.
+**Done** (#11): `KiwisCoOpModCore/VConsoleFraming.cs` encodes and reads protocol 211 packets (12-byte header, 16-bit big-endian length; commands over 65,522 bytes are dropped rather than sent). `StreamWatcher` moved to `KiwisCoOpModCore`: it stops, logs a warning (B5) and raises `Faulted` when the stream ends, breaks or its header makes no sense (before, a desync was caught as an error and reading went on out of sync). `VConsole` then closes the connection and raises `ConnectionLost`, and `ClientProgram` reconnects through `ConnectVConsole`. Tests in `KiwisCoOpModCore.Tests` cover long commands, split and merged reads, and desyncs, against `FakeVConsoleServer`.
 
 ### B5. Medium: errors are silently swallowed (`agent-ok`)
 
