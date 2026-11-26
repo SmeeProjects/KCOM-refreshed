@@ -49,7 +49,12 @@ namespace AlyxGamemode
             Tracker.Stop();
             Tracker.Start();
         }
+        // The timer fires on a thread-pool thread: the connection list is only read on the server thread (UPGRADE_PLAN.md B2).
         private void Track(object? sender, System.Timers.ElapsedEventArgs e)
+        {
+            WorkQueue.Server.Post(TrackOnServerThread);
+        }
+        private void TrackOnServerThread()
         {
             IndexedClient? client = Connections.Find(c => c.Session.ConnectionInfo.Id != ClientID);
             Response response = new("command", "kcom_grace " + MovedObject.Name);
