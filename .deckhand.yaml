@@ -14,6 +14,8 @@ instructions: .deckhand/instructions.md
 # The plan has many security items (S1–S5): review each pull request once it's ready, and fix what the review finds (2 rounds).
 review:
   on: ready
+  # In-game checks wait for the phase exit issue: never a Must fix or a follow-up.
+  instructions: .deckhand/review.md
   fix: 2
 
 # W2/W5 touch every csproj, so pull requests will conflict as they merge: rebase Deckhand's own ones by themselves.

@@ -180,7 +180,7 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 
 **Fix:** use `CultureInfo.InvariantCulture` in every `ToString`/`Parse`. As a one-line stopgap, set `CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture` in `Program.Main`. Add unit tests that run under `fr-FR`.
 
-**Done** (#10): `KiwisCoOpModCore/GameNumber.cs` formats and parses with the invariant culture, and `Vector`, `Angle` and every `float.Parse`/`int.Parse` of game data in `AlyxGamemode.cs` use it. The other parses already passed `InvariantCulture.NumberFormat`, but with the default `NumberStyles`, which allows thousands separators and reads `12,5` as `125`: `GameNumber` uses `NumberStyles.Float`. `Program.Main` sets the invariant culture as the backstop. Tests run under `fr-FR` (`KiwisCoOpModCore.Tests/GameNumberTests.cs`). The in-game check (host on `fr-FR`) is still open.
+**Done** (#10): `KiwisCoOpModCore/GameNumber.cs` formats and parses with the invariant culture, and `Vector`, `Angle` and every `float.Parse`/`int.Parse` of game data in `AlyxGamemode.cs` use it. The other parses already passed `InvariantCulture.NumberFormat`, but with the default `NumberStyles`, which allows thousands separators and reads `12,5` as `125`: `GameNumber` uses `NumberStyles.Float`. `Program.Main` sets the invariant culture as the backstop. Tests run under `fr-FR` (`KiwisCoOpModCore.Tests/GameNumberTests.cs`). The in-game check (host on `fr-FR`) is in phase 1's exit issue (#17).
 
 ### B2. High: shared lists aren't thread-safe (`agent-ok`)
 
@@ -254,14 +254,14 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
   - checking the game after a Valve update (`tools/check-game-compat.ps1`);
   - compiling addon assets (W10);
   - the S8 port check.
-- **Labels and review.** Label each issue `agent-ok` or `needs-game`. A pull request on a `needs-game` issue should include a short manual test checklist, run locally before merging.
+- **Labels and review.** Label each issue `agent-ok` or `needs-game`. Manual in-game testing happens only in the phase exit issues (§8), never one pull request at a time, since every check needs two players. A pull request lists the checks it needs under an "In-game checks (phase exit)" heading in its description and is merged without them; an issue lists them under the same heading rather than in its acceptance criteria, so it closes once its code is merged. Reviews treat a check that hasn't been run as neither a Must fix nor a follow-up (`.deckhand/review.md`), and nobody files an issue just for a test. Work that needs the game (W10, S8) keeps its own `needs-game` issue.
 - **Keep Valve's files out.** Never commit Valve game files, even partly, or upload them to CI.
 
 ---
 
 ## 8. Suggested order of work
 
-Each phase is a parent issue under #5, with one issue per item. Each phase ends with a two-player in-game test issue (`needs-game`), and every issue of the next phase is blocked by it.
+Each phase is a parent issue under #5, with one issue per item. Each phase ends with a two-player in-game test issue (`needs-game`), the only place where in-game checks are asked for and tracked, and every issue of the next phase is blocked by it.
 
 1. **Phase 1, stability** (≈1 day, mostly `agent-ok`)
    - W2–W4, then retarget to .NET 10.
@@ -282,5 +282,5 @@ Each phase is a parent issue under #5, with one issue per item. Each phase ends 
    - Replace console-text parsing with a structured message format, together with B6's English-only join matching.
    - W10 (compiled addon assets), W12 (SmartScreen).
 5. **The in-game test issue at the end of each phase** (`needs-game`)
-   - Two-player in-game test on a campaign map, for example `a3_hotel_lobby_basement`.
-   - Run `tools/check-game-compat.ps1`.
+   - Once every other issue of the phase is closed, a run on the exit issue gathers the "In-game checks (phase exit)" sections of the phase's merged pull requests into one checklist in the exit issue (no copying by hand).
+   - The maintainer runs that whole checklist in one two-player session on a campaign map, for example `a3_hotel_lobby_basement`, together with `tools/check-game-compat.ps1`, then closes the issue.
