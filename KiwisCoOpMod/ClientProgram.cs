@@ -105,7 +105,7 @@ namespace KiwisCoOpMod
                                     if (map != response.map)
                                     {
                                         ui.Invoke(() => ui.LogToOutput(channel, "Changing map to " + response.map));
-                                        vConsole.WriteCommand("addon_play " + response.map + ";addon_tools_map " + response.map);
+                                        vConsole.WriteCommand("addon_play " + response.map);
                                         map = response.map;
                                     }
                                 }

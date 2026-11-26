@@ -411,7 +411,7 @@ namespace KiwisCoOpMod
 
         private void SteamWorkshopToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start(new ProcessStartInfo("https://steamcommunity.com/sharedfiles/filedetails/?id=2739356543") { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo("https://github.com/SmeeProjects/KCOM-refreshed/tree/main/WorkshopAddon/game/hlvr_addons/kiwimp_alyx") { UseShellExecute = true });
         }
 
         private void ClientPrintVConsoleToolStripMenuItem_CheckedChanged(object sender, EventArgs e)

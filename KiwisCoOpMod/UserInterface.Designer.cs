@@ -262,7 +262,7 @@ namespace KiwisCoOpMod
             // 
             this.steamWorkshopToolStripMenuItem.Name = "steamWorkshopToolStripMenuItem";
             this.steamWorkshopToolStripMenuItem.Size = new System.Drawing.Size(164, 22);
-            this.steamWorkshopToolStripMenuItem.Text = "Steam Workshop";
+            this.steamWorkshopToolStripMenuItem.Text = "Game Addon";
             this.steamWorkshopToolStripMenuItem.Click += new System.EventHandler(this.SteamWorkshopToolStripMenuItem_Click);
             // 
             // koFiToolStripMenuItem
