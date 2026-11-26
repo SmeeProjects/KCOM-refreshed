@@ -13,6 +13,7 @@
     SOFTWARE.
     -----------------------------------------------------------------------------
 */
+using KiwisCoOpModCore;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -81,7 +82,18 @@ namespace KiwisCoOpMod
                         await stream.ReadExactlyAsync(data.AsMemory(0, length));
                         OnMessageAvailable(new MessageAvailableEventArgs(commandType, data));
                     }
-                    catch { }
+                    catch (Exception e) when (e is IOException or ObjectDisposedException)
+                    {
+                        // The stream is gone (the game closed, or Disconnect closed it): reading again
+                        // would only fail again, so stop instead of spinning.
+                        if (working)
+                            Log.Warning("VConsole", "Connection to VConsole lost", e);
+                        working = false;
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Error("VConsole", e, "Failed to handle a VConsole message");
+                    }
                 }
             }
         }

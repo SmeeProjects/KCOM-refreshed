@@ -166,3 +166,5 @@ For addon development, you may want to "symlink" folders from this repository to
 ## Help & Support
 
 Join the [Discord](https://discord.gg/3X3teNecWs) for support between users and developers.
+
+Errors show in KCOM's "Errors" tab and, with their full details, in the `logs` folder next to `KiwisCoOpMod.exe` (one `kcom-<date>.log` per day). Attach the latest one when you report a problem.

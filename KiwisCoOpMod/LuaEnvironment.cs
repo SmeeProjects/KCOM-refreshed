@@ -91,16 +91,22 @@ namespace KiwisCoOpMod
         }
         public void LuaError(Exception e)
         {
+            // printerr shows it in the "Lua Errors" tab, so the log only writes it to the file.
             LuaFunction? printerror = lua["printerr"] as LuaFunction;
             if (printerror != null)
             {
                 try
                 {
-                    Debug.WriteLine(e);
                     printerror.Call(e.Message);
+                    Log.Error("Lua", e, notify: false);
+                    return;
                 }
-                catch { }
+                catch (Exception printerrError)
+                {
+                    Log.Error("Lua", printerrError, "printerr failed");
+                }
             }
+            Log.Error("Lua", e);
         }
         public static bool CheckForMainThread()
         {
@@ -137,7 +143,10 @@ namespace KiwisCoOpMod
                 else
                     HandleInternal(handleType, vs);
             }
-            catch { } // Give up
+            catch (Exception e)
+            {
+                Log.Error("Lua", e, "Failed to run the Lua handler for " + handleType);
+            }
         }
         public void HandleInternal(PluginHandleType handleType, params object[] vs)
         {

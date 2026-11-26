@@ -396,8 +396,10 @@ namespace AlyxGamemode
                         break;
                 }
             }
-            catch
-            {}
+            catch (Exception e)
+            {
+                Log.Error("AlyxGamemode", e, "Failed to handle " + type);
+            }
         }
     }
 }

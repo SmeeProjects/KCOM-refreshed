@@ -209,6 +209,8 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 
 **Fix:** log errors to the UI and to a rolling log file, for example with `Microsoft.Extensions.Logging`.
 
+**Done** (#9), without `Microsoft.Extensions.Logging`: it has no file provider of its own, so a small `KiwisCoOpModCore.Log` does both. It writes to `logs/kcom-<date>.log` next to the app (a new file each day or past 5 MB, newest 10 kept) and raises `Log.Logged`, which the app shows in an "Errors" tab. The same error repeated within 10 seconds is only counted, so a failing `Think` handler can't flood it. Gamemodes and plugins can call it too. `StreamWatcher.Read` now stops when the VConsole stream closes instead of spinning on the exception.
+
 ### B6. Low: smaller logic bugs
 
 - **Backward animation outputs are sent as forward** (`agent-ok`). `kcom_interval.lua:392-397` maps each `KCOM_OnCompletion*_Backward` handler to the `*_Forward` output, a copy-paste error. Other players' games replay backward animations as forward.
