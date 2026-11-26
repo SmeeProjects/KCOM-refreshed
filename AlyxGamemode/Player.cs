@@ -26,6 +26,8 @@ namespace AlyxGamemode
     {
         public int Index = 0;
         public IndexedClient Client;
+        // Set once the game's sync loop has started (its MAPN line arrived), reset when it initializes again.
+        public bool SyncStarted = false;
         public Player(int index, IndexedClient client)
         {
             this.Index = index;
