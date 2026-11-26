@@ -3,8 +3,8 @@
 ## In-game checks
 
 The game can't run in Deckhand's runs, and every in-game check needs two players, so all of
-them are run together in the current phase's exit issue (#17, #25, #32, and one per later
-phase), after the pull requests are merged (`UPGRADE_PLAN.md` §7 and §8).
+them are run together in the current phase's exit issue (#17, #25, #32,
+#58), after the pull requests are merged (`UPGRADE_PLAN.md` §7 and §8).
 
 - An in-game check that hasn't been run is neither a **Must fix** finding nor a
   **follow-up**: never file one as an issue, and never count an acceptance criterion as unmet

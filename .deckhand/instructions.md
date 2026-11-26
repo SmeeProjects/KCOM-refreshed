@@ -41,7 +41,7 @@ needs another tool, add it to the Dockerfile. `global.json` (W2) must use
 ## In-game checks
 
 Every in-game check needs two players, so they are all run together in the current phase's
-exit issue (#17, #25, #32, and one per later phase), never one change at a time (plan §7).
+exit issue (#17, #25, #32, #58), never one change at a time (plan §7).
 `needs-game` still means "needs a PC with the game"; only the timing of the tests changes.
 
 - In a pull request, never ask for an in-game test before merging. Put the checks it needs
