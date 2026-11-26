@@ -64,7 +64,7 @@ This is a record of how compatibility was checked, so it can be checked again af
 | Newtonsoft.Json | 13.0.1 | 13.0.4 | Update. 13.0.1 already contains the fix for CVE-2024-21907. Keep Newtonsoft, because the Lua scripts `import` it by name (`base_scripts/base/__init.lua`). |
 | Websocket.Client | 4.4.43 | 5.5.1 | Maintained. Major-version jump: read the v5 release notes and adjust `ClientProgram.cs`. |
 | NLua | 1.6.0 | 1.7.9 | Update together with KeraLua. |
-| KeraLua (via NLua) | 1.3.1 | 1.4.11 | Its version is **hard-coded** in the copy steps in `KiwisCoOpMod.csproj`. Fix with W3 first. |
+| KeraLua (via NLua) | 1.3.1 | 1.4.11 | Comes with NLua. The copy steps no longer hard-code its version (W3). |
 | DiscordRichPresence | 1.0.175 | 1.6.1.70 | Update. Expect small API changes in `DiscordRpcPlugin.cs`. Its csproj copy path also hard-codes the version and `net35`. |
 | System.Drawing.Common | 6.0.2-mauipre (a preview build) | 10.0.x | Use 10.0.x, or remove it, since `Color` is part of the base framework. |
 | **Fleck** (WebSocket server) | 1.2.0 | 1.2.0 (2021-04) | **Unmaintained.** It has no known security advisories, but no message-size limits or TLS support. Medium-term, replace it with ASP.NET Core (Kestrel) WebSockets. |
@@ -226,16 +226,16 @@ A host on a comma-decimal locale sends `kcom_setlocation_nonuuid kcom_head_0 12,
 | # | Today | Recommended | Label |
 |---|---|---|---|
 | W1 | Upstream is archived. | Keep this fork as the source of truth. Keep the MIT `LICENSE.md` and credit KiwifruitDev in the README. | — |
-| W2 | Each csproj repeats the framework, version and company settings. | Add `Directory.Build.props` (`net10.0-windows`, `Nullable`, `LangVersion`, `AnalysisLevel=latest-recommended`, version in one place) and `global.json` (SDK `10.0.4xx`). | `agent-ok` |
-| W3 | Copy steps hard-code `$(USERPROFILE)\.nuget\packages\nlua\1.6.0\...` and the KeraLua and DiscordRPC paths. They break on any version change and in CI. | Use `GeneratePathProperty="true"` on the `PackageReference` and copy from `$(PkgNLua)` / `$(PkgKeraLua)`, or just rely on normal copy-local. | `agent-ok` |
-| W4 | The `CopyDLLs` targets always copy into **both** `bin\Debug` and `bin\Release`. | Copy only into `$(Configuration)`. | `agent-ok` |
+| W2 | Each csproj repeats the framework, version and company settings. | Add `Directory.Build.props` (`net10.0-windows`, `Nullable`, `LangVersion`, `AnalysisLevel=latest`, version in one place) and `global.json` (SDK `10.0.4xx`). `latest-recommended` adds about 130 CA warnings, so it waits for W11. **Done** (#7). | `agent-ok` |
+| W3 | Copy steps hard-code `$(USERPROFILE)\.nuget\packages\nlua\1.6.0\...` and the KeraLua and DiscordRPC paths. They break on any version change and in CI. | Copy the DLLs NuGet resolved: `@(RuntimeCopyLocalItems)` / `@(RuntimeTargetsCopyLocalItems)` filtered on `%(NuGetPackageId)`. (`GeneratePathProperty` would still hard-code `lib\net6.0` and need a direct KeraLua reference.) **Done** (#7). | `agent-ok` |
+| W4 | The `CopyDLLs` targets always copy into **both** `bin\Debug` and `bin\Release`. | Copy only into `$(Configuration)`. **Done** (#7). | `agent-ok` |
 | W5 | Package versions are spread across four projects. | Central Package Management (`Directory.Packages.props`) plus `NuGetAuditMode=all`. | `agent-ok` |
 | W6 | No CI. | A GitHub Actions workflow on `windows-latest`: `setup-dotnet` 10.0.x, `dotnet build -c Release`, `dotnet test`, then `dotnet publish -r win-x64 --self-contained`, zipped with the addon folder. Upload it as an artifact, and create a GitHub Release on `v*` tags. | `agent-ok` |
 | W7 | No dependency or security automation. | Dependabot (`nuget` and `github-actions`), CodeQL for C#, and secret scanning. | `agent-ok` |
 | W8 | No tests. | An xUnit project covering packet parsing and validation (S1/S5), number formatting under `fr-FR` (B1), the client command allowlist (S2) and VConsole framing (B4). Also add a **fake VConsole TCP server**: it speaks protocol 211, records the `CMND` packets it receives and sends scripted `PRNT` lines, so the whole client → server → client path can be tested without the game. | `agent-ok` |
 | W9 | The Workshop addon is deleted, so it has to be installed by hand. | `tools/install-addon.ps1`: find the game through Steam's `libraryfolders.vdf` and copy `WorkshopAddon/game/hlvr_addons/kiwimp_alyx` into `game/hlvr_addons/`. Also add an "Install addon" menu item in the app. | write: `agent-ok`, verify: `needs-game` |
 | W10 | Addon sounds (`.wav`) and the test map (`.vmap`) are uncompiled sources, so players without the Workshop Tools get no sounds and no `mp_kiwitest` map. | Compile them once with the Workshop Tools, and attach the compiled `.vsnd_c` / `.vmap_c` files to releases. | `needs-game` |
-| W11 | Build warnings (nullable, CA2022, NU1701). | Fix them, then turn on `TreatWarningsAsErrors`. | `agent-ok` |
+| W11 | Build warnings (nullable, CA2022, NU1701). | Fix them, raise `AnalysisLevel` to `latest-recommended` (W2) and fix what it adds, then turn on `TreatWarningsAsErrors`. | `agent-ok` |
 | W12 | Unsigned .exe, so Windows SmartScreen will warn. | Optional: sign releases, or document the SmartScreen warning in the README. | — |
 | W13 | Game-side Lua isn't checked by any tool. | Run `luacheck` in CI on `WorkshopAddon/**/*.lua` and `KiwisCoOpMod/base_scripts/**/*.lua`, using the names in `vlua_globals.lua` as allowed globals. It would have caught the B6 copy-paste and precedence bugs. | `agent-ok` |
 | W14 | Project structure. | Move protocol and logic code (packet parsing, validation, number formatting, VConsole framing) into a plain `net10.0` library. Builds and tests then work on any OS, and only the WinForms app stays `-windows`. Alternatively, set `EnableWindowsTargeting=true` to build on Linux runners. | `agent-ok` |
