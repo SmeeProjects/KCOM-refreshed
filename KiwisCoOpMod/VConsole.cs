@@ -188,11 +188,12 @@ namespace KiwisCoOpMod
         public void WriteCommand(string command, bool urgent = false)
         {
             // Longer commands don't fit in a packet's 16-bit length (B4).
-            if (stream != null && command.Length <= VConsoleFraming.MaxCommandLength)
+            if (command.Length <= VConsoleFraming.MaxCommandLength)
             {
                 byte[] completeData = VConsoleFraming.EncodeCommand(command, Settings.Default.VconsoleProtocol);
-                if (!killed)
+                if (stream != null && !killed)
                     stream.Write(completeData);
+                // Not connected yet (the server can answer before Connect is done) or lost: Connect sends it.
                 else if (urgent)
                     lock (commandQueue)
                         commandQueue.Add(completeData);

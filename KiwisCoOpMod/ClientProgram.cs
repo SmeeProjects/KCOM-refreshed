@@ -84,7 +84,6 @@ namespace KiwisCoOpMod
                     ReconnectTimeout = TimeSpan.FromSeconds(60),
                     IsReconnectionEnabled = false
                 };
-                ws.Start();
                 ws.DisconnectionHappened.Subscribe(info =>
                 {
                     ui.LogToOutput(channel, "Disconnected: " + info.Type.ToString());
@@ -112,7 +111,8 @@ namespace KiwisCoOpMod
                                     if (map != response.map)
                                     {
                                         ui.LogToOutput(channel, "Changing map to " + response.map);
-                                        vConsole.WriteCommand("addon_play " + response.map);
+                                        // Urgent: queued if VConsole isn't connected yet, so the map still loads.
+                                        vConsole.WriteCommand("addon_play " + response.map, true);
                                         map = response.map;
                                     }
                                 }
@@ -166,7 +166,10 @@ namespace KiwisCoOpMod
                     ws.Send(JsonConvert.SerializeObject(input));
                     ui.LogToOutput(channel, "Client attempted connection to IP " + Settings.Default.ClientIpAddress + ":" + Settings.Default.ServerPort);
                 });
+                // Connect VConsole before logging in: the server's "authenticated" reply carries the
+                // addon_play command, which was lost while VConsole was still connecting.
                 ConnectVConsole(ws);
+                ws.Start();
                 PluginHandler.Handle(plugins, PluginHandleType.Client_PostStart, ui, ws, error);
                 LuaEnvironment.instance.Handle(PluginHandleType.Client_PostStart, ui, ws, error);
             }
