@@ -550,6 +550,53 @@ namespace KiwisCoOpMod
             AskUPnP(false);
         }
 
+        // Copies the addon shipped next to KiwisCoOpMod.exe into the game (UPGRADE_PLAN.md W9).
+        private void InstallAddonToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string source = Path.Combine(AppContext.BaseDirectory, "addon", AddonInstaller.AddonName);
+            string? game;
+            try
+            {
+                game = AddonInstaller.FindGameDirectory(GetSteamDirectories());
+            }
+            catch (Exception ex)
+            {
+                // An unreadable libraryfolders.vdf or manifest: let the player pick the folder instead.
+                Log.Warning("Addon", "Failed to search the Steam libraries for Half-Life: Alyx", ex);
+                game = null;
+            }
+            if (game == null)
+            {
+                using FolderBrowserDialog dialog = new()
+                {
+                    Description = "Half-Life: Alyx wasn't found in your Steam libraries. Select its folder (the one holding 'game'), for example 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Half-Life Alyx'.",
+                    UseDescriptionForTitle = true
+                };
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+                game = dialog.SelectedPath;
+            }
+            try
+            {
+                string target = AddonInstaller.Install(source, game);
+                MessageBox.Show(this, "Installed the KCOM addon to:\n\n" + target + "\n\nRestart Half-Life: Alyx if it is running.", "Install Addon", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Addon", ex, "Failed to install the addon into " + game, notify: false);
+                MessageBox.Show(this, "The addon couldn't be installed:\n\n" + ex.Message, "Install Addon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private static IEnumerable<string> GetSteamDirectories()
+        {
+            if (Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null) is string userPath)
+                yield return userPath.Replace('/', '\\');
+            if (Microsoft.Win32.Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam", "InstallPath", null) is string machinePath)
+                yield return machinePath;
+            yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam");
+        }
+
         private static async void AskUPnP(bool firstTime)
         {
             Settings.Default.ClickedUPnP = true;
