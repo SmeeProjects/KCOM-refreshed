@@ -75,6 +75,25 @@ namespace KiwisCoOpModCore
             return done.Task;
         }
 
+        // Runs the action and returns once it has run: at once on the queue's own thread, else queued.
+        // Its errors go to onError. Never call it from a thread the queued work waits for (such as Invoke).
+        public void Run(Action action)
+        {
+            if (IsCurrentThread)
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception e)
+                {
+                    ReportError(e);
+                }
+            }
+            else
+                RunAsync(action).GetAwaiter().GetResult();
+        }
+
         // Stops accepting work. What is already queued still runs, then the thread ends.
         public void Complete()
         {
@@ -99,16 +118,21 @@ namespace KiwisCoOpModCore
                     }
                     catch (Exception e)
                     {
-                        try
-                        {
-                            onError(e);
-                        }
-                        catch
-                        {
-                            // A failing error handler must not stop the server thread.
-                        }
+                        ReportError(e);
                     }
                 }
+            }
+        }
+
+        private void ReportError(Exception e)
+        {
+            try
+            {
+                onError(e);
+            }
+            catch
+            {
+                // A failing error handler must not stop the queue's thread.
             }
         }
     }

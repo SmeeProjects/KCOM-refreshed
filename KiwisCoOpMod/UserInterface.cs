@@ -368,8 +368,35 @@ namespace KiwisCoOpMod
                 LogToOutput(entry.Level == LogLevel.Error ? errorChannel : warningChannel, entry.Summary);
         }
 
+        // Runs the action on the UI thread, without making the calling thread wait (UPGRADE_PLAN.md B3).
+        // Dropped when the window has no handle (it gets one in its constructor) or is closing.
+        public void RunOnUiThread(Action action)
+        {
+            if (Thread.CurrentThread == Program.uiThread)
+            {
+                action();
+                return;
+            }
+            if (!IsHandleCreated || IsDisposed)
+                return;
+            try
+            {
+                BeginInvoke(action);
+            }
+            catch (InvalidOperationException)
+            {
+                // The window closed in the meantime.
+            }
+        }
+
+        // LogToOutputGeneric, LogToOutput and SetStatus can be called from any thread: the server, client and Lua threads log through them.
         public void LogToOutputGeneric(params object[] text)
         {
+            if (Thread.CurrentThread != Program.uiThread)
+            {
+                RunOnUiThread(() => LogToOutputGeneric(text));
+                return;
+            }
             richTextBoxOutput.Select(richTextBoxOutput.TextLength, 0);
             richTextBoxOutput.SelectionColor = Color.Black;
             richTextBoxOutput.AppendText("\n" + string.Join(" ", text));
@@ -377,6 +404,11 @@ namespace KiwisCoOpMod
 
         public void LogToOutput(Channel channel, params object[] text)
         {
+            if (Thread.CurrentThread != Program.uiThread)
+            {
+                RunOnUiThread(() => LogToOutput(channel, text));
+                return;
+            }
             /*
             if(richTextBoxOutput.Lines.Length+1 >= 64)
             {
@@ -421,11 +453,21 @@ namespace KiwisCoOpMod
 
         public void SetStatus(Color color, params object[] text)
         {
+            if (Thread.CurrentThread != Program.uiThread)
+            {
+                RunOnUiThread(() => SetStatus(color, text));
+                return;
+            }
             toolStripStatusLabelConnection.ForeColor = color;
             toolStripStatusLabelConnection.Text = string.Join(" ", text);
         }
         public void SetStatus(Channel channel, params object[] text)
         {
+            if (Thread.CurrentThread != Program.uiThread)
+            {
+                RunOnUiThread(() => SetStatus(channel, text));
+                return;
+            }
             toolStripStatusLabelConnection.ForeColor = channel.GetColor();
             toolStripStatusLabelConnection.Text = channel + string.Join(" ", text);
         }

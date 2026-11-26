@@ -32,11 +32,9 @@ lua_env.persistence = {}
 lua_env.handlers = {}
 print = function(...)
     local channel = Channel('LUA', 'Lua Scripting', Color.CornflowerBlue)
-    local varargTable = {...}
+    -- Lua runs on its own thread: LogToOutput passes the text to the UI thread without waiting for it.
     if Program.userInterface then
-        Program.userInterface:Invoke(function()
-            Program.userInterface:LogToOutput(channel, table.unpack(varargTable))
-        end)
+        Program.userInterface:LogToOutput(channel, ...)
     end
 end
 printdebug = function(...)
@@ -44,11 +42,9 @@ printdebug = function(...)
 end
 printerr = function(...)
     local channel = Channel('ERR', 'Lua Errors', Color.Red)
-    local varargTable = {...}
+    -- Lua runs on its own thread: LogToOutput passes the text to the UI thread without waiting for it.
     if Program.userInterface then
-        Program.userInterface:Invoke(function()
-            Program.userInterface:LogToOutput(channel, table.unpack(varargTable))
-        end)
+        Program.userInterface:LogToOutput(channel, ...)
     end
 end
 split = function(str, delimiter)

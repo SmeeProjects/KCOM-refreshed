@@ -16,72 +16,96 @@
 using NLua;
 using KiwisCoOpModCore;
 using Fleck;
-using System.Diagnostics;
 using Newtonsoft.Json;
-using System.Reflection;
 
 namespace KiwisCoOpMod
 {
+    // Lua runs only on its own thread (UPGRADE_PLAN.md B3): an NLua state can't be used from two threads,
+    // and running it on the UI thread made every network message wait for the window.
+    // The server and client socket threads wait for each handler, so the Lua handlers keep their order
+    // around the gamemode's and only touch the server's lists while the server thread waits for them (B2).
+    // The UI thread never waits for Lua: its handlers are only queued. Lua must not Invoke the UI either:
+    // LogToOutput and SetStatus can be called from any thread.
     public sealed class LuaEnvironment
     {
         public static readonly LuaEnvironment instance = new();
+        private readonly WorkQueue queue = new("KCOM Lua", e => Log.Error("Lua", e));
         Lua lua;
         public LuaEnvironment()
         {
             lua = new();
-            lua.LoadCLRPackage();
-            // Just in case the front-end Lua scripts don't implement __init.lua
-            lua.DoString(@"
-                printerr = function(...)
-                    local channel = Channel('ERR', 'Lua Errors', Color.Red)
-                    local varargTable = {...}
-                    if Program.userInterface then
-                        Program.userInterface:Invoke(function()
-                            Program.userInterface:LogToOutput(channel, table.unpack(varargTable))
-                        end)
+            queue.Post(() =>
+            {
+                lua.LoadCLRPackage();
+                // Just in case the front-end Lua scripts don't implement __init.lua
+                lua.DoString(@"
+                    printerr = function(...)
+                        local channel = Channel('ERR', 'Lua Errors', Color.Red)
+                        if Program.userInterface then
+                            Program.userInterface:LogToOutput(channel, ...)
+                        end
                     end
-                end
-            ");
-            LoadFiles();
+                ");
+                LoadFiles();
+            });
         }
         public void Dispose()
         {
-            lua.Dispose();
+            queue.Post(lua.Dispose);
+            queue.Complete();
+        }
+        // Runs the action on the Lua thread: at once when already there, queued from the UI thread,
+        // and waited for from any other thread.
+        private void OnLuaThread(Action action)
+        {
+            if (Thread.CurrentThread == Program.uiThread)
+                queue.Post(action);
+            else
+                queue.Run(action);
         }
         public void LoadFiles()
         {
-            // Create "scripts" directory if it doesn't exist
-            if (!Directory.Exists("scripts"))
-                Directory.CreateDirectory("scripts");
-            // Load scripts (.lua files) in "scripts" directory
-            List<string> foundFiles = Directory.GetFiles("scripts", "*.lua", SearchOption.AllDirectories).ToList();
-            foundFiles.Sort(); // Sort alphabetically
-            foreach (string file in foundFiles)
+            OnLuaThread(() =>
             {
-                lua.DoFile(file);
-            }
+                // Create "scripts" directory if it doesn't exist
+                if (!Directory.Exists("scripts"))
+                    Directory.CreateDirectory("scripts");
+                // Load scripts (.lua files) in "scripts" directory
+                List<string> foundFiles = Directory.GetFiles("scripts", "*.lua", SearchOption.AllDirectories).ToList();
+                foundFiles.Sort(); // Sort alphabetically
+                foreach (string file in foundFiles)
+                {
+                    lua.DoFile(file);
+                }
+            });
         }
         public void RunFile(string file)
         {
-            try
+            OnLuaThread(() =>
             {
-                lua.DoFile(file);
-            }
-            catch(Exception e)
-            {
-                LuaError(e);
-            }
+                try
+                {
+                    lua.DoFile(file);
+                }
+                catch (Exception e)
+                {
+                    LuaError(e);
+                }
+            });
         }
         public void RunLua(string luaCode)
         {
-            try
+            OnLuaThread(() =>
             {
-                lua.DoString(luaCode);
-            }
-            catch (Exception e)
-            {
-                LuaError(e);
-            }
+                try
+                {
+                    lua.DoString(luaCode);
+                }
+                catch (Exception e)
+                {
+                    LuaError(e);
+                }
+            });
         }
 
         // Lua does not implement splitting
@@ -108,45 +132,9 @@ namespace KiwisCoOpMod
             }
             Log.Error("Lua", e);
         }
-        public static bool CheckForMainThread()
-        {
-            if (Thread.CurrentThread.GetApartmentState() == ApartmentState.STA &&
-                !Thread.CurrentThread.IsBackground && !Thread.CurrentThread.IsThreadPoolThread && Thread.CurrentThread.IsAlive)
-            {
-                MethodInfo correctEntryMethod = Assembly.GetEntryAssembly().EntryPoint;
-                StackTrace trace = new StackTrace();
-                StackFrame[] frames = trace.GetFrames();
-                for (int i = frames.Length - 1; i >= 0; i--)
-                {
-                    MethodBase method = frames[i].GetMethod();
-                    if (correctEntryMethod == method)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
         public void Handle(PluginHandleType handleType, params object[] vs)
         {
-            try
-            {
-                // If on a different thread than main, invoke on main thread
-                if (!CheckForMainThread())
-                {
-                    Program.userInterface.Invoke(() =>
-                    {
-                        HandleInternal(handleType, vs);
-                    });
-                }
-                else
-                    HandleInternal(handleType, vs);
-            }
-            catch (Exception e)
-            {
-                Log.Error("Lua", e, "Failed to run the Lua handler for " + handleType);
-            }
+            OnLuaThread(() => HandleInternal(handleType, vs));
         }
         public void HandleInternal(PluginHandleType handleType, params object[] vs)
         {
